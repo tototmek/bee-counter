@@ -34,32 +34,31 @@ void setup() {
 }
 
 void loop() {
-    for (int g; g < 4; ++g) {
-        const int numMeasurements = 20;
-        bee_counter::gate_reading_t measurements[numMeasurements];
-        bee_counter::gate_reading_t sumMeasurements = {0, 0, 0, 0, 0};
+    const int numMeasurements = 10;
+    bee_counter::gate_reading_t measurements[numMeasurements];
+    bee_counter::gate_reading_t sumMeasurements = {0, 0, 0, 0, 0};
 
-        for (int i = 0; i < numMeasurements; ++i) {
-            measurements[i] = gate[g].measure();
-            sumMeasurements.timeRawL += measurements[i].timeRawL;
-            sumMeasurements.timeL += measurements[i].timeL;
-            sumMeasurements.TimeRawR += measurements[i].TimeRawR;
-            sumMeasurements.timeR += measurements[i].timeR;
-            sumMeasurements.timeDelta += measurements[i].timeDelta;
-            delay(3);
-        }
-
-        bee_counter::gate_reading_t avgMeasurement;
-        avgMeasurement.timeRawL = sumMeasurements.timeRawL / numMeasurements;
-        avgMeasurement.timeL = sumMeasurements.timeL / numMeasurements;
-        avgMeasurement.TimeRawR = sumMeasurements.TimeRawR / numMeasurements;
-        avgMeasurement.timeR = sumMeasurements.timeR / numMeasurements;
-        avgMeasurement.timeDelta = sumMeasurements.timeDelta / numMeasurements;
-
-        std::string message =
-            fmt::format("{} - AvgLeftRaw:{}, AvgRightRaw:{} ----", g, avgMeasurement.timeRawL, avgMeasurement.TimeRawR);
-        Serial.print(message.c_str());
+    for (int i = 0; i < numMeasurements; ++i) {
+        measurements[i] = gate[2].measure();
+        sumMeasurements.timeRawL += measurements[i].timeRawL;
+        sumMeasurements.timeL += measurements[i].timeL;
+        sumMeasurements.TimeRawR += measurements[i].TimeRawR;
+        sumMeasurements.timeR += measurements[i].timeR;
+        sumMeasurements.timeDelta += measurements[i].timeDelta;
+        delay(4);
     }
+
+    bee_counter::gate_reading_t avgMeasurement;
+    avgMeasurement.timeRawL = sumMeasurements.timeRawL / numMeasurements;
+    avgMeasurement.timeL = sumMeasurements.timeL / numMeasurements;
+    avgMeasurement.TimeRawR = sumMeasurements.TimeRawR / numMeasurements;
+    avgMeasurement.timeR = sumMeasurements.timeR / numMeasurements;
+    avgMeasurement.timeDelta = sumMeasurements.timeDelta / numMeasurements;
+
+    std::string message = fmt::format("{},{},{}", millis(), avgMeasurement.timeRawL, avgMeasurement.TimeRawR);
+    Serial.print(message.c_str());
     Serial.println();
-    delay(1);
+    while (millis() % 50) {
+        ;
+    }
 }
