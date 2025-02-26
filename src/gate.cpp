@@ -10,10 +10,10 @@ void Gate::initialize() {
     pinMode(config_.chargePin, OUTPUT);
     pinMode(config_.measurePinL, INPUT);
     pinMode(config_.measurePinR, INPUT);
+    digitalWrite(config_.chargePin, LOW);
     gpio_set_drive_capability((gpio_num_t)config_.measurePinL, GPIO_DRIVE_CAP_3);
     gpio_set_drive_capability((gpio_num_t)config_.measurePinR, GPIO_DRIVE_CAP_3);
     gpio_set_drive_capability((gpio_num_t)config_.chargePin, GPIO_DRIVE_CAP_3);
-    digitalWrite(config_.chargePin, LOW);
 }
 
 gate_reading_t Gate::measure() {

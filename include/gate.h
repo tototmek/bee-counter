@@ -10,7 +10,9 @@ typedef struct GateCalibration gate_calibration_t;
 typedef struct GateReading gate_reading_t;
 
 struct GateCalibration {
+    int32_t resistanceL;
     int32_t timeOffsetL;
+    int32_t resistanceR;
     int32_t timeOffsetR;
 };
 
