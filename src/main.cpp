@@ -32,33 +32,17 @@ void setup() {
     gate[2].initialize();
     gate[3].initialize();
 }
-
+float prevMeasurement = 0.0f;
 void loop() {
-    const int numMeasurements = 10;
-    bee_counter::gate_reading_t measurements[numMeasurements];
-    bee_counter::gate_reading_t sumMeasurements = {0, 0, 0, 0, 0};
 
-    for (int i = 0; i < numMeasurements; ++i) {
-        measurements[i] = gate[2].measure();
-        sumMeasurements.timeRawL += measurements[i].timeRawL;
-        sumMeasurements.timeL += measurements[i].timeL;
-        sumMeasurements.TimeRawR += measurements[i].TimeRawR;
-        sumMeasurements.timeR += measurements[i].timeR;
-        sumMeasurements.timeDelta += measurements[i].timeDelta;
-        delay(4);
-    }
+    auto measurements = gate[2].measureSeparately();
 
-    bee_counter::gate_reading_t avgMeasurement;
-    avgMeasurement.timeRawL = sumMeasurements.timeRawL / numMeasurements;
-    avgMeasurement.timeL = sumMeasurements.timeL / numMeasurements;
-    avgMeasurement.TimeRawR = sumMeasurements.TimeRawR / numMeasurements;
-    avgMeasurement.timeR = sumMeasurements.timeR / numMeasurements;
-    avgMeasurement.timeDelta = sumMeasurements.timeDelta / numMeasurements;
-
-    std::string message = fmt::format("{},{},{}", millis(), avgMeasurement.timeRawL, avgMeasurement.TimeRawR);
-    Serial.print(message.c_str());
-    Serial.println();
-    while (millis() % 50) {
+    // if (!millis() % 100) {
+        std::string message = fmt::format("{},{},{}", millis(), measurements.timeRawL, measurements.TimeRawR);
+        Serial.print(message.c_str());
+        Serial.println();
+    // }
+    while (millis() % 10) {
         ;
     }
 }

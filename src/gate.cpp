@@ -50,5 +50,51 @@ gate_reading_t Gate::measure() {
     }
     return output;
 }
+gate_reading_t Gate::measureSeparately() {
+    int32_t totalCount = 0;
+    int32_t counterL = 0;
+    int32_t counterR = 0;
+    bool lTriggered, rTriggered;
+    noInterrupts();
+    digitalWrite(config_.chargePin, HIGH);
+    do {
+        lTriggered = digitalRead(config_.measurePinL);
+        if (!lTriggered) {
+            ++counterL;
+        };
+        if (counterL >= kChargeTimeout_) {
+            break;
+        }
+    } while (!lTriggered);
+    digitalWrite(config_.chargePin, LOW);
+    interrupts();
+
+    delay(5);
+
+    noInterrupts();
+    digitalWrite(config_.chargePin, HIGH);
+    do {
+        rTriggered = digitalRead(config_.measurePinR);
+        if (!rTriggered) {
+            ++counterR;
+        }
+        if (counterR >= kChargeTimeout_) {
+            break;
+        }
+    } while (!rTriggered);
+    digitalWrite(config_.chargePin, LOW);
+    interrupts();
+
+    gate_reading_t output = {0};
+    output.timeRawL = counterL;
+    output.TimeRawR = counterR;
+    output.timeL = counterL + config_.calibration.timeOffsetL;
+    output.timeR = counterR + config_.calibration.timeOffsetR;
+    output.timeDelta = output.timeL - output.timeR;
+    if (config_.invertDirection) {
+        output.timeDelta = -output.timeDelta;
+    }
+    return output;
+}
 
 } // namespace bee_counter

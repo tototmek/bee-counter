@@ -41,6 +41,7 @@ class Gate {
     Gate(gate_config_t config);
     void initialize();
     gate_reading_t measure();
+    gate_reading_t measureSeparately();
 };
 
 } // namespace bee_counter

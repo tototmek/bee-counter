@@ -1,15 +1,15 @@
 import serial
 
-serial_port = "/dev/ttyACM0"
+serial_port = "/dev/ttyACM3"
 baudrate = 115200
-output_path = "data/record.csv"
+output_path = "data/serial-measurement-no-filter.csv"
 
 try:
     ser = serial.Serial(serial_port, baudrate)
     if ser.in_waiting:
         data = ser.readline()  # Dump first line to ensure correct parsing
     with open(output_path, "w") as file:
-        file.writelines(["time, left_gate_raw, right_gate_raw"])
+        file.writelines(["time, left_gate_raw, right_gate_raw\n"])
         while True:
             if ser.in_waiting > 0:
                 data = ser.readline().decode("utf-8").strip()
