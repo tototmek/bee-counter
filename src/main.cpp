@@ -35,12 +35,12 @@ void setup() {
 float prevMeasurement = 0.0f;
 void loop() {
 
-    auto measurements = gate[2].measureSeparately();
+    auto measurements = gate[2].measure();
 
     // if (!millis() % 100) {
-        std::string message = fmt::format("{},{},{}", millis(), measurements.timeRawL, measurements.TimeRawR);
-        Serial.print(message.c_str());
-        Serial.println();
+    std::string message = fmt::format("{},{},{}", millis(), measurements.timeRawL, measurements.TimeRawR);
+    Serial.print(message.c_str());
+    Serial.println();
     // }
     while (millis() % 10) {
         ;

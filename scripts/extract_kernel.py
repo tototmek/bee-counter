@@ -41,15 +41,16 @@ def custom_filter(samples, initial_filtered_value=0, initial_sample=0):
     filtered_values[0] = initial_filtered_value
     last_filtered_value = initial_filtered_value
     last_sample = initial_sample
+    filter_value = 0.999
 
     for i, sample in enumerate(samples):
         if i == 0:
-            filtered_values[0] = 0.996 * (initial_filtered_value + sample - initial_sample)
+            filtered_values[0] = filter_value * (initial_filtered_value + sample - initial_sample)
             last_filtered_value = filtered_values[0]
             last_sample = sample
             continue
 
-        filtered_value = 0.996 * (last_filtered_value + sample - last_sample)
+        filtered_value = filter_value * (last_filtered_value + sample - last_sample)
         filtered_values[i] = filtered_value
         last_filtered_value = filtered_value
         last_sample = sample
@@ -61,7 +62,14 @@ time_filtered = time[filter_window - 1 :]
 left_filtered = moving_average(left, filter_window)
 right_filtered = moving_average(right, filter_window)
 delta_filtered = left_filtered - right_filtered
-# delta_filtered_hp = high_pass_filter(delta_filtered)
+# delta_filtered = custom_filter(delta_filtered)
+kernel_start = 55000
+kernel_end = 57500
+kernel = delta_filtered[kernel_start:kernel_end]
+kernel_time = time_filtered[kernel_start:kernel_end]
+kernel = kernel - np.average(kernel)
+kernel = -kernel
+kernel = kernel[::-1]
 
 # plt.rcParams.update(
 #     {
@@ -70,33 +78,13 @@ delta_filtered = left_filtered - right_filtered
 #         "font.serif": ["Computer Modern Roman"],
 #     }
 # )
+with open("data/detection_kernel.txt", "w") as file:
+    line = ",".join([str(value) for value in kernel])
+    file.write(line)
 
-# plt.figure(figsize=(10, 6))
-# plt.plot(time, left, label="Raw Left Gate Data")
-# plt.plot(time_filtered, left_filtered, label="Filtered Left Gate Data")
-
-# plt.title(r"$\mathrm{Left\ Gate\ Data}$", fontsize=16)
-# plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-# plt.ylabel(r"$\mathrm{Gate\ Value}$", fontsize=14)
-# plt.legend(fontsize=12)
-# plt.grid(True)
-# plt.tight_layout()
-
-# plt.figure(figsize=(10, 6))
-# plt.plot(time, right, label="Raw Right Gate Data")
-# plt.plot(time_filtered, right_filtered, label="Filtered Right Gate Data")
-
-# plt.title(r"$\mathrm{Right\ Gate\ Data}$", fontsize=16)
-# plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-# plt.ylabel(r"$\mathrm{Gate\ Value}$", fontsize=14)
-# plt.legend(fontsize=12)
-# plt.grid(True)
-# plt.tight_layout()
 
 plt.figure(figsize=(10, 6))
-plt.plot(time, delta, label="Raw Delta")
-plt.plot(time_filtered, delta_filtered, label="Filtered Delta")
-plt.plot(time_filtered, delta_filtered_hp, label="Filtered Delta High Passed")
+plt.plot(kernel_time, kernel, label="Detection Kernel")
 
 plt.title(r"$\mathrm{Gate\ Delta}$", fontsize=16)
 plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)

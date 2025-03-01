@@ -1,8 +1,8 @@
 import serial
 
-serial_port = "/dev/ttyACM3"
+serial_port = "/dev/ttyACM0"
 baudrate = 115200
-output_path = "data/serial-measurement-no-filter.csv"
+output_path = "data/measurement-parallel-long.csv"
 
 try:
     ser = serial.Serial(serial_port, baudrate)
