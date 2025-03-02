@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-data = np.genfromtxt("data/measurement.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/gumis.csv", delimiter=",", names=True)
 
 time = data["time"]
 left = data["left_gate_raw"]

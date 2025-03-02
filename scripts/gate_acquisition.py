@@ -2,10 +2,11 @@ import serial
 
 serial_port = "/dev/ttyACM0"
 baudrate = 115200
-output_path = "data/empty.csv"
+output_path = "data/gumis.csv"
 
 try:
     ser = serial.Serial(serial_port, baudrate)
+    ser.flush()
     if ser.in_waiting:
         data = ser.readline()  # Dump first line to ensure correct parsing
     with open(output_path, "w") as file:
