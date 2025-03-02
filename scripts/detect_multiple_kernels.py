@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = np.genfromtxt("data/measurement-parallel-filtered.csv", delimiter=",", names=True)
-kernel_paths = ["data/detection_kernel.txt"] + [f"data/kernels/scaled{i}.txt" for i in range(5)]
+data = np.genfromtxt("data/measurement-processed.csv", delimiter=",", names=True)
+kernel_paths = ["data/detection_kernel.txt"] + [f"data/kernels/scaled{i}.txt" for i in range(6)]
+# kernel_paths = ["data/detection_kernel.txt"]
 
 time = data["time"]
 delta = data["delta"]
-
-filter_window = 30
 
 
 def load_kernel(path):
@@ -20,16 +19,35 @@ def load_kernel(path):
 kernels = [load_kernel(path) for path in kernel_paths]
 
 
+# def moving_median(a, n):
+#     ret = np.zeros(len(a) - n + 1)
+#     for i in range(len(a) - n + 1):
+#         window = a[i : i + n]
+#         ret[i] = np.median(window)
+#     return ret
+
+
+# filter_window = 2000
+# base_level_median = moving_median(delta, filter_window)
+# time = time[round(filter_window / 2) - 1 : -round(filter_window / 2)]
+# delta = delta[round(filter_window / 2) - 1 : -round(filter_window / 2)]
+
+# delta = delta - base_level_median
 delta = delta - np.average(delta)
 
 convolutions = []
 for kernel in kernels:
     convolution = np.convolve(delta, kernel, "same")
-    convolutions.append(convolution / len(kernel))
+    convolutions.append(convolution)
 
-convolution = np.average(convolutions, axis=0)
+convolution = np.average(convolutions, axis=0) / len(kernel)
 
-convolution2 = np.median(convolutions, axis=0)
+threshold = 0.5 * np.max(
+    convolution
+)  # This will need to be changed when the absolute values of convolution are known. This is gonna detect a lot whenever there are no gate passes
+
+detection = 1.0 * (convolution > threshold) - 1.0 * (convolution < -threshold)
+
 
 # plt.rcParams.update(
 #     {
@@ -39,23 +57,27 @@ convolution2 = np.median(convolutions, axis=0)
 #     }
 # )
 
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)  # Create two subplots with shared x-axis
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)  # Create two subplots with shared x-axis
 
 # First subplot (Delta)
 ax1.plot(time, delta, label="Delta")
-ax1.set_title(r"$\mathrm{Delta}$", fontsize=16)
-ax1.set_ylabel(r"$\mathrm{Delta}$", fontsize=14)
-ax1.legend(fontsize=12)
+ax1.set_title(r"Delta")
+ax1.set_xlabel(r"Time (s)")
+ax1.set_ylabel(r"Delta")
 ax1.grid(True)
 
 # Second subplot (Convolution)
 ax2.plot(time, convolution, label="Convolution (average)")
 # ax2.plot(time, convolution2, label="Convolution (median)")
-ax2.set_title(r"$\mathrm{Convolution}$", fontsize=16)
-ax2.set_xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-ax2.set_ylabel(r"$\mathrm{Convolution}$", fontsize=14)
-ax2.legend(fontsize=12)
+ax2.set_title(r"Convolution")
+ax2.set_xlabel(r"Time (s)")
+ax2.set_ylabel(r"Convolution")
 ax2.grid(True)
+
+ax3.plot(time, detection, label="Detection")
+ax3.set_title(r"Detection")
+ax3.set_xlabel(r"Time (s)")
+ax3.set_ylabel(r"Detection")
 
 plt.tight_layout()
 plt.show()

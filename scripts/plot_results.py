@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-data = np.genfromtxt("data/measurement-parallel-long.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/measurement.csv", delimiter=",", names=True)
 
 time = data["time"]
 left = data["left_gate_raw"]
@@ -11,7 +11,7 @@ delta = left - right
 time = time - time[0]
 time = time / 1000
 
-filter_window = 30
+filter_window = 100
 
 
 def moving_average(a, n):
@@ -96,7 +96,7 @@ delta_filtered = left_filtered - right_filtered
 plt.figure(figsize=(10, 6))
 plt.plot(time, delta, label="Raw Delta")
 plt.plot(time_filtered, delta_filtered, label="Filtered Delta")
-plt.plot(time_filtered, delta_filtered_hp, label="Filtered Delta High Passed")
+# plt.plot(time_filtered, delta_filtered_hp, label="Filtered Delta High Passed")
 
 plt.title(r"$\mathrm{Gate\ Delta}$", fontsize=16)
 plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)

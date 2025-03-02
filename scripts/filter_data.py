@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-data = np.genfromtxt("data/measurement-parallel-long.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/old/measurement-parallel-long.csv", delimiter=",", names=True)
 
 time = data["time"]
 left = data["left_gate_raw"]
@@ -11,7 +11,7 @@ delta = left - right
 time = time - time[0]
 time = time / 1000
 
-filter_window = 30
+filter_window = 100
 
 
 def moving_average(a, n):
@@ -25,7 +25,7 @@ left_filtered = moving_average(left, filter_window)
 right_filtered = moving_average(right, filter_window)
 delta_filtered = left_filtered - right_filtered
 
-with open("data/measurement-parallel-filtered.csv", "w") as file:
-    file.write("time,delta\n")
-    for time, delta in zip(time_filtered, delta_filtered):
-        file.write(f"{time},{delta}\n")
+with open("data/old/measurement-parallel-filtered.csv", "w") as file:
+    file.write("time,left_gate,right_gate,delta\n")
+    for time, left, right, delta in zip(time_filtered, left_filtered, right_filtered, delta_filtered):
+        file.write(f"{time},{left},{right},{delta}\n")
