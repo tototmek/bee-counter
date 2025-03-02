@@ -1,14 +1,15 @@
 import serial
+import time
 
 serial_port = "/dev/ttyACM0"
 baudrate = 115200
-output_path = "data/gumis.csv"
+output_path = "data/measurement-long.csv"
 
 try:
     ser = serial.Serial(serial_port, baudrate)
+    time.sleep(0.2)
     ser.flush()
-    if ser.in_waiting:
-        data = ser.readline()  # Dump first line to ensure correct parsing
+    ser.read_all()
     with open(output_path, "w") as file:
         file.writelines(["time, left_gate_raw, right_gate_raw\n"])
         while True:

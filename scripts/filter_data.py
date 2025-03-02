@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-data = np.genfromtxt("data/gumis.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/measurement-long.csv", delimiter=",", names=True)
 
 time = data["time"]
 left = data["left_gate_raw"]
@@ -25,7 +25,7 @@ left_filtered = moving_average(left, filter_window)
 right_filtered = moving_average(right, filter_window)
 delta_filtered = left_filtered - right_filtered
 
-with open("data/gumis-processed.csv", "w") as file:
+with open("data/measurement-long-processed.csv", "w") as file:
     file.write("time,left_gate,right_gate,delta\n")
     for time, left, right, delta in zip(time_filtered, left_filtered, right_filtered, delta_filtered):
         file.write(f"{time},{left},{right},{delta}\n")

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = np.genfromtxt("data/gumis-processed.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/measurement-long-processed.csv", delimiter=",", names=True)
 
 time = data["time"]
 delta = data["delta"]
