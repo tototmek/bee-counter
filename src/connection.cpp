@@ -6,7 +6,7 @@
 namespace bee_counter::connection {
 
 void Transmitter::initialize() {
-    Serial1.begin(kBaudrate, SERIAL_8N1, -1, 4);
+    Serial1.begin(kBaudrate, SERIAL_8N1, -1, pin_);
 }
 
 void Transmitter::transmitReading(const gate_reading_t* reading) {
@@ -16,7 +16,7 @@ void Transmitter::transmitReading(const gate_reading_t* reading) {
 }
 
 void Receiver::initialize() {
-    Serial1.begin(kBaudrate, SERIAL_8N1, 4, -1);
+    Serial1.begin(kBaudrate, SERIAL_8N1, pin_, -1);
 }
 
 bool Receiver::receiveReading(gate_reading_t* reading, uint32_t timeoutMs) {

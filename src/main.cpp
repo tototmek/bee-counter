@@ -25,14 +25,17 @@ bee_counter::Gate gate[bee_counter::kNumGates] = {gateConfig[0], gateConfig[1], 
 bee_counter::gate_reading_t gate_reading[bee_counter::kNumGates*2] = {0};
 uint32_t measurement[bee_counter::kNumGates] = {0};
 
-bee_counter::connection::Receiver receiver{4};
-bee_counter::connection::Transmitter transmitter{4};
+bee_counter::connection::Receiver receiver{8};
+bee_counter::connection::Transmitter transmitter{8};
 
 
 void setup() {
     Serial.begin(115200);
-    receiver.initialize();
-    transmitter.initialize();
+
+    for (int i = 0; i < bee_counter::kNumGates; ++i) {
+        gate[i].initialize();
+    }
+
     if (bee_counter::connection::getMode() == MODE_PRIMARY) {
         // Primary MCU mode
         receiver.initialize();
@@ -57,18 +60,18 @@ void loop() {
         for (int i = 0; i < bee_counter::kNumGates; ++i) {
             gate_reading[i] = gate[i].measure();
         }
-        // if (receiver.receiveReading(&single_reading, 100)) {
-        //     gate_reading[single_reading.gateId] = single_reading;
-        // }
-        // if (receiver.receiveReading(&single_reading, 100)) {
-        //     gate_reading[single_reading.gateId] = single_reading;
-        // }
-        // if (receiver.receiveReading(&single_reading, 100)) {
-        //     gate_reading[single_reading.gateId] = single_reading;
-        // }
-        // if (receiver.receiveReading(&single_reading, 100)) {
-        //     gate_reading[single_reading.gateId] = single_reading;
-        // }
+        if (receiver.receiveReading(&single_reading, 100)) {
+            gate_reading[single_reading.gateId] = single_reading;
+        }
+        if (receiver.receiveReading(&single_reading, 100)) {
+            gate_reading[single_reading.gateId] = single_reading;
+        }
+        if (receiver.receiveReading(&single_reading, 100)) {
+            gate_reading[single_reading.gateId] = single_reading;
+        }
+        if (receiver.receiveReading(&single_reading, 100)) {
+            gate_reading[single_reading.gateId] = single_reading;
+        }
         std::string message =
             fmt::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", millis(),
                         gate_reading[0].timeRawL, gate_reading[0].timeRawR,
