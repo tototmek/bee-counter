@@ -5,31 +5,22 @@
 
 namespace bee_counter {
 
-typedef struct GateConfig gate_config_t;
-typedef struct GateCalibration gate_calibration_t;
-typedef struct GateReading gate_reading_t;
+constexpr uint8_t kNumGates = 4;
 
-struct GateCalibration {
-    int32_t resistanceL;
-    int32_t timeOffsetL;
-    int32_t resistanceR;
-    int32_t timeOffsetR;
-};
+typedef struct GateConfig gate_config_t;
+typedef struct GateReading gate_reading_t;
 
 struct GateConfig {
     uint8_t chargePin;
     uint8_t measurePinL;
     uint8_t measurePinR;
     bool invertDirection;
-    gate_calibration_t calibration;
 };
 
 struct GateReading {
+    uint8_t gateId;
     int32_t timeRawL;
-    int32_t timeL;
-    int32_t TimeRawR;
-    int32_t timeR;
-    int32_t timeDelta;
+    int32_t timeRawR;
 };
 
 class Gate {

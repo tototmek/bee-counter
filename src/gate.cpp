@@ -41,15 +41,10 @@ gate_reading_t Gate::measure() {
     interrupts();
     gate_reading_t output = {0};
     output.timeRawL = counterL;
-    output.TimeRawR = counterR;
-    output.timeL = counterL + config_.calibration.timeOffsetL;
-    output.timeR = counterR + config_.calibration.timeOffsetR;
-    output.timeDelta = output.timeL - output.timeR;
-    if (config_.invertDirection) {
-        output.timeDelta = -output.timeDelta;
-    }
+    output.timeRawR = counterR;
     return output;
 }
+
 gate_reading_t Gate::measureSeparately() {
     int32_t totalCount = 0;
     int32_t counterL = 0;
@@ -87,13 +82,7 @@ gate_reading_t Gate::measureSeparately() {
 
     gate_reading_t output = {0};
     output.timeRawL = counterL;
-    output.TimeRawR = counterR;
-    output.timeL = counterL + config_.calibration.timeOffsetL;
-    output.timeR = counterR + config_.calibration.timeOffsetR;
-    output.timeDelta = output.timeL - output.timeR;
-    if (config_.invertDirection) {
-        output.timeDelta = -output.timeDelta;
-    }
+    output.timeRawR = counterR;
     return output;
 }
 
