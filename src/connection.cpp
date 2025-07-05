@@ -1,66 +1,70 @@
 #include "connection.h"
 
 #include <Arduino.h>
+#include <EEPROM.h>
 
 namespace bee_counter::connection {
 
-void Connection::sendByte(uint8_t byte) {
-    pinMode(pin_, OUTPUT);
-
-    digitalWrite(pin_, 0); // start bit
-    delayMicroseconds(kBitTimeUs);
-
-    for (int j = 0; j < 8; ++j) {
-        uint8_t bit = (byte >> j) & 1;
-        digitalWrite(pin_, bit); // i*j-th data bit
-        delayMicroseconds(kBitTimeUs);
-    }
-    digitalWrite(pin_, 1); // stop bit
-    delayMicroseconds(kBitTimeUs);
+void Transmitter::initialize() {
+    Serial1.begin(kBaudrate, SERIAL_8N1, -1, 4);
 }
 
-uint8_t Connection::receiveByte(uint32_t timeoutMs) {
-    pinMode(pin_, INPUT);
-    while (digitalRead(pin_)){
-        ;
-    }
-    // Received start bit
-    delayMicroseconds(kBitTimeUs);
-    delayMicroseconds(kBitTimeUs/2); // Wait to be in the middle of the bit
-
-    uint8_t result = 0;
-
-    for (int j = 0; j < 8; ++j) {
-        uint8_t bit = digitalRead(pin_);
-        result |= bit << j; // read the i*j-th data bit
-        delayMicroseconds(kBitTimeUs);
-    }
-    return result;
+void Transmitter::transmitReading(const gate_reading_t* reading) {
+    Serial1.write(0xfe);
+    Serial1.write(0xfd);
+    Serial1.write((const uint8_t*)reading, sizeof(gate_reading_t));
 }
 
-void Connection::sendReading(const gate_reading_t* reading) {
-
-    uint32_t dataLen = sizeof(gate_reading_t);
-    uint8_t data[dataLen];
-    memcpy(data, reading, dataLen);
-
-    for (int i = 0; i < dataLen; ++i) {
-        sendByte(data[i]);
-    }
+void Receiver::initialize() {
+    Serial1.begin(kBaudrate, SERIAL_8N1, 4, -1);
 }
 
-
-void Connection::receiveReading(gate_reading_t* reading, uint32_t timeoutMs) {
-
-    uint32_t dataLen = sizeof(gate_reading_t);
-    uint8_t data[dataLen] = {0};
-
-    for (int i = 0; i < dataLen; ++i) {
-        data[i] = receiveByte(timeoutMs);
+bool Receiver::receiveReading(gate_reading_t* reading, uint32_t timeoutMs) {
+    uint8_t bytes[sizeof(gate_reading_t)];
+    uint32_t timeoutTime = millis() + timeoutMs;
+    uint8_t state = 0;
+    int data_idx = 0;
+    int b = 0;
+    while (millis() < timeoutTime) {
+        if (!Serial1.available()) continue;
+        b = Serial1.read();
+        if (b == -1) continue; // No bytes received, continue spinning
+        switch (state) {
+          case 0:
+            if (b == 0xfe) state = 1;
+            break;
+          case 1:
+            if (b == 0xfd) state = 2;
+            else state = 0;
+            break;
+          case 2:
+            bytes[data_idx++] = b;
+            if (data_idx == sizeof(gate_reading_t)) {
+                memcpy((uint8_t*)reading, bytes, sizeof(gate_reading_t));
+                return true; // All data received
+            }
+            break;
+        }
     }
+    return false;
+}
+    
 
-    memcpy(reading, data, dataLen);
+void setModePersistent(uint8_t mode) {
+    EEPROM.begin(1);
+    EEPROM.write(0, mode);
+    EEPROM.commit();
+    EEPROM.end();
 }
 
+uint8_t getMode() {
+    if (cached_mode != NO_MODE) {
+        return cached_mode;
+    }
+    EEPROM.begin(1);
+    cached_mode = EEPROM.read(0);
+    EEPROM.end();
+    return cached_mode;
+}
 
-} // namespace bee_counter::connection
+} //namespace bee_counter::connection

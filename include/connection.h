@@ -3,27 +3,39 @@
 
 #include "gate.h"
 
+#define MODE_PRIMARY 0
+#define MODE_SECONDARY 1
+#define NO_MODE 0xff
+
+namespace {
+    static uint8_t cached_mode = NO_MODE;
+}
+
 namespace bee_counter::connection {
 
-constexpr int kBitTimeUs = 20;
+constexpr int kBaudrate = 115200;
 
 
-class Connection{
+class Transmitter{
   public:
-    gate_reading_t readingBuffer_[kNumGates] = {0};
     uint8_t pin_;
 
-    Connection(uint8_t pin) : pin_(pin) {};
-    bool initialize() {return true;};
-    void sendReading(const gate_reading_t* reading);
-    void receiveReading(gate_reading_t* reading, uint32_t timeoutMs);
-
-  private:
-    void sendByte(uint8_t byte);
-    uint8_t receiveByte(uint32_t timeoutMs);
+    Transmitter(uint8_t pin) : pin_(pin) {};
+    void initialize();
+    void transmitReading(const gate_reading_t* reading);
 };
 
+class Receiver{
+  public:
+    uint8_t pin_;
 
+    Receiver(uint8_t pin) : pin_(pin) {};
+    void initialize();
+    bool receiveReading(gate_reading_t* reading, uint32_t timeoutMs);
+};
+
+void setModePersistent(uint8_t mode);
+uint8_t getMode();
 
 } // namespace bee_counter::connection
 

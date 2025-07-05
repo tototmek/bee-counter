@@ -40,8 +40,13 @@ gate_reading_t Gate::measure() {
     digitalWrite(config_.chargePin, LOW);
     interrupts();
     gate_reading_t output = {0};
-    output.timeRawL = counterL;
-    output.timeRawR = counterR;
+    if (config_.invertDirection) {
+        output.timeRawL = counterR;
+        output.timeRawR = counterL;
+    } else {
+        output.timeRawL = counterL;
+        output.timeRawR = counterR;
+    }
     return output;
 }
 
