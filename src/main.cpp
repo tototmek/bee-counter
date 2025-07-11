@@ -37,12 +37,11 @@ void secondaryMcuLoop();
 
 
 void setup() {
-    Serial.begin(115200);
-
     for (int i = 0; i < bee_counter::kNumGates; ++i) {
         gate[i].initialize();
     }
     if (bee_counter::connection::getMode() == MODE_PRIMARY) { // Primary MCU mode
+        Serial.begin(115200);
         receiver.initialize();
     } else if (bee_counter::connection::getMode() == MODE_SECONDARY) { // Secondary MCU mode
         transmitter.initialize();
