@@ -2,16 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-data = np.genfromtxt("data/measurement-long.csv", delimiter=",", names=True)
+data = np.genfromtxt("data/measurement-2025-07-08_17-52-13.csv", delimiter=",", names=True)
+N = 8
 
 time = data["time"]
-left = data["left_gate_raw"]
-right = data["right_gate_raw"]
+left = np.array([data[f"ch{i}_left_gate_raw"] for i in range(N)])
+right = np.array([data[f"ch{i}_right_gate_raw"] for i in range(N)])
 delta = left - right
 time = time - time[0]
 time = time / 1000
 
-filter_window = 100
+filter_window = 600
 
 
 def moving_average(a, n):
@@ -58,9 +59,10 @@ def custom_filter(samples, initial_filtered_value=0, initial_sample=0):
 
 
 time_filtered = time[filter_window - 1 :]
-left_filtered = moving_average(left, filter_window)
-right_filtered = moving_average(right, filter_window)
+left_filtered = np.array([moving_average(left[i], filter_window) for i in range(N)])
+right_filtered = np.array([moving_average(right[i], filter_window) for i in range(N)])
 delta_filtered = left_filtered - right_filtered
+
 # delta_filtered_hp = high_pass_filter(delta_filtered)
 
 # plt.rcParams.update(
@@ -71,38 +73,21 @@ delta_filtered = left_filtered - right_filtered
 #     }
 # )
 
-# plt.figure(figsize=(10, 6))
-# plt.plot(time, left, label="Raw Left Gate Data")
-# plt.plot(time_filtered, left_filtered, label="Filtered Left Gate Data")
+plt.rcParams.update(
+    {
+        # "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Ubuntu"],
+    }
+)
 
-# plt.title(r"$\mathrm{Left\ Gate\ Data}$", fontsize=16)
-# plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-# plt.ylabel(r"$\mathrm{Gate\ Value}$", fontsize=14)
-# plt.legend(fontsize=12)
-# plt.grid(True)
-# plt.tight_layout()
+fig, subplots = plt.subplots(N, 1, sharex=True, figsize=(8, 12))  # Create two subplots with shared x-axis
 
-# plt.figure(figsize=(10, 6))
-# plt.plot(time, right, label="Raw Right Gate Data")
-# plt.plot(time_filtered, right_filtered, label="Filtered Right Gate Data")
-
-# plt.title(r"$\mathrm{Right\ Gate\ Data}$", fontsize=16)
-# plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-# plt.ylabel(r"$\mathrm{Gate\ Value}$", fontsize=14)
-# plt.legend(fontsize=12)
-# plt.grid(True)
-# plt.tight_layout()
-
-plt.figure(figsize=(10, 6))
-plt.plot(time, delta, label="Raw Delta")
-plt.plot(time_filtered, delta_filtered, label="Filtered Delta")
-# plt.plot(time_filtered, delta_filtered_hp, label="Filtered Delta High Passed")
-
-plt.title(r"$\mathrm{Gate\ Delta}$", fontsize=16)
-plt.xlabel(r"$\mathrm{Time\ (s)}$", fontsize=14)
-plt.ylabel(r"$\mathrm{Gate\ Delta}$", fontsize=14)
-plt.legend(fontsize=12)
-plt.grid(True)
-plt.tight_layout()
-
+for i, subplot in enumerate(subplots):
+    subplot.plot(time_filtered, delta_filtered[i])
+    subplot.set_title(f"Tunel {i}")
+    # subplot.set_ylabel(r"$\mathrm{N_L}$", fontsize=14)
+    subplot.grid(True)
+subplots[-1].set_xlabel(r"t [s]")
+fig.savefig("images/przebiegi-last.png", dpi=300)
 plt.show()
