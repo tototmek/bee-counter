@@ -1,0 +1,9 @@
+{
+  "score": 0.7738733431516936,
+  "params": {
+    "filter_window": 35,
+    "detrend_window": 399,
+    "timeout_samples": 78,
+    "input_threshold": 0.9702426908885362
+  }
+}

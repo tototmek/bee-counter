@@ -34,36 +34,57 @@ def increments(a: np.ndarray) -> np.ndarray:
     return np.concatenate(([0], np.diff(a)))
 
 
+# Fast filtering implementations (SciPy preferred, with fallbacks)
+try:
+    from scipy.ndimage import uniform_filter1d as _uniform_filter1d, median_filter as _median_filter
+    _HAS_SCIPY = True
+except Exception:
+    _HAS_SCIPY = False
+    _uniform_filter1d = None
+    _median_filter = None
+
+
+def _ensure_int(n: int) -> int:
+    try:
+        n = int(n)
+    except Exception:
+        n = 1
+    return max(1, n)
+
+
 def moving_median(a, n):
     a = np.asarray(a, dtype=float)
-    if n <= 1 or len(a) == 0:
-        return a.copy()
-    length = len(a)
-    half = n // 2
-    out = np.empty(length, dtype=float)
-    for i in range(length):
-        left = max(0, i - half)
-        right = min(length - 1, i + half)
-        window = a[left:right + 1]
-        out[i] = np.median(window)
-    return out
+    n = _ensure_int(n)
+    # Prefer SciPy
+    if _HAS_SCIPY:
+        # Ensure odd window for median stability
+        if n % 2 == 0:
+            n += 1
+        return _median_filter(a, size=n, mode='nearest')
+    # Fallback: use pandas rolling median (fast, C-backed)
+    try:
+        import pandas as _pd
+        return _pd.Series(a).rolling(window=n, center=True, min_periods=1).median().to_numpy()
+    except Exception:
+        # Last resort: simple numpy median over shrinking window (slower)
+        length = len(a)
+        half = n // 2
+        out = np.empty(length, dtype=float)
+        for i in range(length):
+            left = max(0, i - half)
+            right = min(length - 1, i + half)
+            out[i] = np.median(a[left:right + 1])
+        return out
 
 
 def moving_average(a, n):
     a = np.asarray(a, dtype=float)
-    if n <= 1 or len(a) == 0:
-        return a.copy()
-    length = len(a)
-    half = n // 2
-    # cumulative sum for O(1) range sum queries
-    cs = np.concatenate(([0.0], np.cumsum(a, dtype=float)))
-    out = np.empty(length, dtype=float)
-    for i in range(length):
-        left = max(0, i - half)
-        right = min(length - 1, i + half)
-        total = cs[right + 1] - cs[left]
-        out[i] = total / (right - left + 1)
-    return out
+    n = _ensure_int(n)
+    if _HAS_SCIPY:
+        return _uniform_filter1d(a, size=n, mode='nearest')
+    # Fallback: fast NumPy convolution with boxcar kernel (same length)
+    kernel = np.ones(n, dtype=float) / float(n)
+    return np.convolve(a, kernel, mode='same')
 
 
 class DetectorFsm:
