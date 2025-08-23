@@ -23,10 +23,22 @@ def visualize_annotations(channel_idx, start_time, end_time):
     
     # Plot raw data
     channel_name = f'delta{channel_idx}'
-    ax1.plot(raw_filtered['time'], raw_filtered[channel_name], 'b-', linewidth=0.5, alpha=0.8)
-    ax1.set_ylabel(f'Raw Data ({channel_name})')
+    ax1.plot(raw_filtered['time'], raw_filtered[channel_name], 'b-', linewidth=0.5, alpha=0.3, label='Raw Data')
+    
+    # Apply rolling average filter with window size 30
+    filtered_data = raw_filtered[channel_name].rolling(window=30, center=True).mean()
+    ax1.plot(raw_filtered['time'], filtered_data, 'b-', linewidth=1.5, alpha=0.8, label='Filtered data')
+    
+    # Scale the plot according to filtered data range
+    filtered_min = filtered_data.min()
+    filtered_max = filtered_data.max()
+    margin = (filtered_max - filtered_min) * 0.1  # Add 10% margin
+    ax1.set_ylim(filtered_min - margin, filtered_max + margin)
+    
+    ax1.set_ylabel(f'Data ({channel_name})')
     ax1.set_title(f'Channel {channel_idx} Data Visualization')
     ax1.grid(True, alpha=0.3)
+    ax1.legend()
     
     # Plot annotations
     enter_times = annotations_filtered[annotations_filtered['event_type'] == 'enter']['timestamp']
