@@ -1,0 +1,1 @@
+python3 scripts/experiment2-detection-algotithm/3-signal-histogram.py -c 0 -s 240 -e 280 --bins 80 --tail-q 0.03 --mult 2 & python3 scripts/experiment2-detection-algotithm/3-signal-histogram.py -c 0 -s 500 -e 600 --bins 80 --tail-q 0.03 --mult 2

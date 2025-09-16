@@ -1,0 +1,10 @@
+16.09.2025
+1. Przygotować zestawienie wyników
+2. Wstawić dane z FSMa
+3. Podejście konwolucyjne:
+    - ekstrakcja idealnego kernela
+    - modyfikacja run-algorithm, by pozwolił na użycie innego algorytmu
+    - testy
+4. Podejście machine-learningowe:
+    - research jakie cechy wyznaczyć z danych
+    - zrobić dataset z wyliczonymi cechami

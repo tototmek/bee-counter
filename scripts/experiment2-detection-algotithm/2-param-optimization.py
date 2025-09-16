@@ -114,7 +114,9 @@ def build_objective(raw_df: pd.DataFrame, channels: List[int], ann_by_channel: D
         filter_window = trial.suggest_int('filter_window', 10, 400)
         detrend_window = trial.suggest_int('detrend_window', filter_window + 10, 1500)
         timeout_samples = trial.suggest_int('timeout_samples', 20, 1500)
-        input_threshold = trial.suggest_float('input_threshold', 0.05, 1.0)
+        adaptive_input_q = trial.suggest_float('adaptive_input_q', 0.001, 0.1)
+        adaptive_input_mult = trial.suggest_float('adaptive_input_mult', 1.0, 2.0)
+        adaptive_input_window = trial.suggest_int('adaptive_input_window', 100, 10000)
 
         # Aggregate counts across all channels and slices (micro-average)
         tp_e = fp_e = fn_e = 0
@@ -124,7 +126,11 @@ def build_objective(raw_df: pd.DataFrame, channels: List[int], ann_by_channel: D
         cfg.filter_window = filter_window
         cfg.detrend_window = detrend_window
         cfg.timeout_samples = timeout_samples
-        cfg.input_threshold = input_threshold
+        cfg.static_input_threshold = 0.970242
+        cfg.adaptive_input_q = adaptive_input_q
+        cfg.adaptive_input_mult = adaptive_input_mult
+        cfg.adaptive_input_window = adaptive_input_window
+        cfg.use_adaptive_threshold = True
 
         for ch in channels:
             ann_df = ann_by_channel[ch]

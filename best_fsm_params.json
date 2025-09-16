@@ -1,9 +1,9 @@
 {
-  "score": 0.7738733431516936,
+  "score": 0.8940418679549114,
   "params": {
-    "filter_window": 35,
-    "detrend_window": 399,
-    "timeout_samples": 78,
-    "input_threshold": 0.9702426908885362
+    "filter_window": 31,
+    "detrend_window": 1469,
+    "timeout_samples": 143,
+    "input_threshold": 0.8711957628182433
   }
 }

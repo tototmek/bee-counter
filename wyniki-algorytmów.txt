@@ -1,0 +1,39 @@
+Wszystkie parametry strojone dla channelu 0
+
+1. FSM static threshold:
+
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+FSM Config:
+filter_window=31
+detrend_window=1469
+timeout_samples=143
+Static threshold
+    threshold value=0.8711857628182433
+
+Metrics (tolerance = 3.00s):
+Enter: TP=27 FP=32 FN=5 Precision=0.46 Recall=0.84 F1=0.59
+Leave: TP=122 FP=23 FN=3        Precision=0.84 Recall=0.98 F1=0.90
+Average F1=0.7485551485551485
+
+
+2. FSM adaptive threshold:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+FSM Config:
+filter_window=31
+detrend_window=1269
+timeout_samples=143
+Adaptive threshold
+    input_q=0.07
+    input_mult=1.6
+    input_window=5000
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=18 FN=2 Precision=0.62 Recall=0.94 F1=0.75
+Leave: TP=101 FP=11 FN=24       Precision=0.90 Recall=0.81 F1=0.85
+Average F1=0.8011603375527426
