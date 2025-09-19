@@ -1,20 +1,23 @@
 import numpy as np
+from scipy import signal
 
-class FsmConfig:
-    filter_window: int = 31
+from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
+
+class CorrelationConfig:
+    filter_window: int = 36
     detrend_window: int = 1269
-    timeout_samples: int = 143
-    static_input_threshold: float = 0.8711857628182433
-    adaptive_input_q: float = 0.07
+    kernel_scales = [0.6, 0.85] # list of additional scaled kernels. Leave empty for one kernel mode
+    static_input_threshold: float = 85
+    adaptive_input_q: float = 0.03
     adaptive_input_mult: float = 1.6
     adaptive_input_window: int = 5000
     use_adaptive_threshold: bool = True
 
     def __repr__(self):
-        ret = "FSM Config:\n"
+        ret = "Correlation Config:\n"
         ret += f"filter_window={self.filter_window}\n"
         ret += f"detrend_window={self.detrend_window}\n"
-        ret += f"timeout_samples={self.timeout_samples}\n"
+        ret += f"kernel_scales={self.kernel_scales}\n"
         if self.use_adaptive_threshold:
             ret += "Adaptive threshold\n"
             ret += f"    input_q={self.adaptive_input_q}\n"
@@ -25,143 +28,28 @@ class FsmConfig:
             ret += f"    threshold value={self.static_input_threshold}"
         return ret
 
-class FsmInput:
-    def __init__(self, time: np.ndarray, signal: np.ndarray):
-        self.time = time
-        self.signal = signal
-
-
-class FsmOutput:
-    def __init__(self, enter_ts: np.ndarray, leave_ts: np.ndarray):
-        self.enter_ts = enter_ts
-        self.leave_ts = leave_ts
-
-class FsmDebug:
+class CorrelationDebug:
     def __init__(self, time: np.ndarray, raw: np.ndarray, filtered: np.ndarray,
-                 median: np.ndarray, detrended: np.ndarray, up_threshold: np.ndarray, bottom_threshold: np.ndarray,
-                 signal_thresholded: np.ndarray, fsm_output: float):
+                 median: np.ndarray, detrended: np.ndarray, up_threshold: np.ndarray, bottom_threshold: np.ndarray, correlations, total_correlation, kernels):
         self.time = time
         self.raw = raw
         self.filtered = filtered
         self.median = median
         self.detrended = detrended
+        self.correlations = correlations
+        self.total_correlation = total_correlation
+        self.kernels = kernels
         self.up_threshold = up_threshold
         self.bottom_threshold = bottom_threshold
-        self.signal_thresholded = signal_thresholded
-        self.fsm_output = fsm_output
 
+def scale_kernel(kernel: np.ndarray, scale: float):
+    original_length = len(kernel)
+    new_length = int(original_length * scale)
+    original_indices = np.arange(original_length)
+    new_indices = np.linspace(0, original_length - 1, new_length)
+    return np.interp(new_indices, original_indices, kernel)
 
-def increments(a: np.ndarray) -> np.ndarray:
-    return np.concatenate(([0], np.diff(a)))
-
-
-# Fast filtering implementations (SciPy preferred, with fallbacks)
-try:
-    from scipy.ndimage import uniform_filter1d as _uniform_filter1d, median_filter as _median_filter
-    _HAS_SCIPY = True
-except Exception:
-    _HAS_SCIPY = False
-    _uniform_filter1d = None
-    _median_filter = None
-
-
-def _ensure_int(n: int) -> int:
-    try:
-        n = int(n)
-    except Exception:
-        n = 1
-    return max(1, n)
-
-
-def moving_median(a, n):
-    a = np.asarray(a, dtype=float)
-    n = _ensure_int(n)
-    # Prefer SciPy
-    if _HAS_SCIPY:
-        # Ensure odd window for median stability
-        if n % 2 == 0:
-            n += 1
-        return _median_filter(a, size=n, mode='nearest')
-    # Fallback: use pandas rolling median (fast, C-backed)
-    try:
-        import pandas as _pd
-        return _pd.Series(a).rolling(window=n, center=True, min_periods=1).median().to_numpy()
-    except Exception:
-        # Last resort: simple numpy median over shrinking window (slower)
-        length = len(a)
-        half = n // 2
-        out = np.empty(length, dtype=float)
-        for i in range(length):
-            left = max(0, i - half)
-            right = min(length - 1, i + half)
-            out[i] = np.median(a[left:right + 1])
-        return out
-
-
-def moving_average(a, n):
-    a = np.asarray(a, dtype=float)
-    n = _ensure_int(n)
-    if _HAS_SCIPY:
-        return _uniform_filter1d(a, size=n, mode='nearest')
-    # Fallback: fast NumPy convolution with boxcar kernel (same length)
-    kernel = np.ones(n, dtype=float) / float(n)
-    return np.convolve(a, kernel, mode='same')
-
-
-class DetectorFsm:
-    def __init__(self, timeout_samples: int):
-        self.state = 0
-        self.output = 0
-        self.timer = 0
-        self.timeout = timeout_samples
-
-    def step(self, input: float) -> float:
-        if self.state == 0:
-            if input == 1:
-                self.state = 1
-                self.timer = 0
-            elif input == -1:
-                self.state = 2
-                self.timer = 0
-
-        elif self.state == 1:
-            self.timer += 1
-            if input == -1:
-                self.state = 0
-                self.output += 1
-            elif self.timer > self.timeout:
-                self.state = 0
-
-        elif self.state == 2:
-            self.timer += 1
-            if input == 1:
-                self.state = 0
-                self.output -= 1
-            elif self.timer > self.timeout:
-                self.state = 0
-
-        return self.output
-
-
-def static_threshold(signal: np.ndarray, threshold: float):
-    up_threshold = np.ones(len(signal), dtype=float) * threshold
-    bottom_threshold = np.ones(len(signal), dtype=float) * -threshold
-    return (up_threshold, bottom_threshold)
-
-def adaptive_threshold(signal: np.ndarray, q: float, mult: float, window_size: int) -> np.ndarray:
-    up_threshold = np.zeros(len(signal), dtype=float)
-    bottom_threshold = np.zeros(len(signal), dtype=float)
-    for i in range(len(signal)):
-        window = signal[max(0, i - window_size // 2):min(len(signal), i + window_size // 2 + 1)]
-        q_low = np.quantile(window, q)
-        q_high = np.quantile(window, 1.0 - q)
-        q_low_scaled = q_low * mult
-        q_high_scaled = q_high * mult
-        up_threshold[i] = q_high_scaled
-        bottom_threshold[i] = q_low_scaled
-    return (up_threshold, bottom_threshold)
-
-def run_fsm(input: FsmInput, config: FsmConfig):
+def run_correlation(input: FsmInput, config: CorrelationConfig):
     # Filter
     signal_filtered = moving_average(input.signal, config.filter_window)
 
@@ -169,39 +57,71 @@ def run_fsm(input: FsmInput, config: FsmConfig):
     median = moving_median(signal_filtered, config.detrend_window)
     signal_detrended = signal_filtered - median
 
-    # Threshold
+    kernel = np.load("scripts/experiment2-detection-algotithm/data/kernel.npy")
+
+    kernels = [kernel]
+    for scale in config.kernel_scales:
+        kernels.append(scale_kernel(kernel, scale))
+
+    # Run convolution
+    correlated_signals = []
+    for kernel in kernels:
+        correlated_signals.append(signal.correlate(signal_detrended, kernel, mode='same'))
+    correlated_signal = np.mean(np.array(correlated_signals), axis=0)
+
     if config.use_adaptive_threshold:
-        up_threshold, bottom_threshold = adaptive_threshold(signal_detrended, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window)
+        up_threshold, bottom_threshold = adaptive_threshold(correlated_signal, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window)
     else:
-        up_threshold, bottom_threshold = static_threshold(signal_detrended, config.static_input_threshold)
-    signal_thresholded = np.zeros(len(signal_detrended), dtype=float)
-    signal_thresholded[signal_detrended > up_threshold] = 1
-    signal_thresholded[signal_detrended < bottom_threshold] = -1
+        up_threshold, bottom_threshold = static_threshold(correlated_signal, config.static_input_threshold)
 
-    # Detect
-    fsm = DetectorFsm(config.timeout_samples)
-    fsm_output = np.zeros(len(signal_thresholded))
-    enter_ts = []
-    leave_ts = []
-    prev_output = 0
-    for i in range(len(signal_thresholded)):
-        fsm_output[i] = fsm.step(signal_thresholded[i])
-        if fsm_output[i] > prev_output:
-            enter_ts.append(input.time[i])
-        elif fsm_output[i] < prev_output:
-            leave_ts.append(input.time[i])
-        prev_output = fsm_output[i]
 
-    debug = FsmDebug(
+    above_threshold = correlated_signal >= up_threshold
+    below_threshold = correlated_signal <= bottom_threshold
+
+    previous_above_state = np.insert(above_threshold[:-1], 0, False)
+    previous_below_state = np.insert(below_threshold[:-1], 0, False)
+    above_rising_edges = above_threshold & ~previous_above_state
+    below_rising_edges = below_threshold & ~previous_below_state
+    enter_ts = input.time[np.where(below_rising_edges)[0]]
+    leave_ts = input.time[np.where(above_rising_edges)[0]]
+
+    debug = CorrelationDebug(
         time=input.time,
         raw=input.signal,
         filtered=signal_filtered,
         median=median,
         detrended=signal_detrended,
+        correlations=correlated_signals,
+        total_correlation=correlated_signal,
+        kernels = kernels,
         up_threshold=up_threshold,
-        bottom_threshold=bottom_threshold,
-        signal_thresholded=signal_thresholded,
-        fsm_output=fsm_output,
+        bottom_threshold=bottom_threshold
     )
 
     return FsmOutput(enter_ts, leave_ts), debug
+
+
+
+if __name__ == "__main__":
+    # Extract the kernel:
+
+    # import pandas as pd
+    import matplotlib.pyplot as plt
+    # channel_idx = 0
+    # RAW_DATA_FILE = 'data/experiments/processed-data/raw-time-adjusted.csv'
+    # channel_name = f'delta{channel_idx}'
+    # df = pd.read_csv(RAW_DATA_FILE)
+    # mask = np.ones(len(df), dtype=bool)
+    # signal = df.loc[mask, channel_name].to_numpy(dtype=float)
+
+    # signal = moving_average(signal, 50)
+    # median = moving_median(signal, 1050)
+    # signal = signal-median
+
+    # KERNEL_START = 3080
+    # KERNEL_LENGTH = 666
+    # kernel_end = KERNEL_START + KERNEL_LENGTH
+    # kernel = signal[KERNEL_START:kernel_end]
+    # plt.plot(kernel)
+    # plt.show()
+    # np.save("scripts/experiment2-detection-algotithm/data/kernel.npy", kernel)
