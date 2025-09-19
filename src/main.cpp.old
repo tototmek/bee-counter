@@ -26,9 +26,6 @@ bee_counter::Gate gate[bee_counter::kNumGates] = {gateConfig[0], gateConfig[1], 
 bee_counter::gate_reading_t gate_reading[bee_counter::kNumGates*2] = {0};
 int delta[bee_counter::kNumGates*2] = {0};
 
-Detector detectors[bee_counter::kNumGates*2];
-int beeCount[bee_counter::kNumGates*2] = {0};
-
 bee_counter::connection::Receiver receiver{8};
 bee_counter::connection::Transmitter transmitter{8};
 
@@ -88,15 +85,11 @@ void primaryMcuLoop() {
     delta[7] = gate_reading[3].timeRawL - gate_reading[3].timeRawR;
     delta[6] = gate_reading[2].timeRawL - gate_reading[2].timeRawR;
     delta[5] = gate_reading[1].timeRawL - gate_reading[1].timeRawR;
-    // Run detection algorithm
-    for (int i = 0; i < bee_counter::kNumGates*2; ++i) {
-        beeCount[i] += detectors[i].update(delta[i]);
-    }
     // Report data to pc
     std::string message =
         fmt::format("{},{},{},{},{},{},{},{},{}", millis(),
-                    beeCount[0], beeCount[1], beeCount[2], beeCount[3],
-                    beeCount[4], beeCount[5], beeCount[6], beeCount[7]);
+                    delta[0], delta[1], delta[2], delta[3],
+                    delta[4], delta[5], delta[6], delta[7]);
     Serial.print(message.c_str());
     Serial.println();
 }
