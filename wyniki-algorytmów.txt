@@ -115,3 +115,94 @@ Metrics (tolerance = 3.00s):
 Enter: TP=26 FP=27 FN=6 Precision=0.49 Recall=0.81 F1=0.61
 Leave: TP=44 FP=13 FN=81        Precision=0.77 Recall=0.35 F1=0.48
 Average F1=0.5476405946994183
+
+
+5. Single kernel synthetic:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+Correlation Config:
+filter_window=15
+detrend_window=1250
+kernel_scales=[]
+Static threshold
+    threshold value=105
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=11 FN=2 Precision=0.73 Recall=0.94 F1=0.82
+Leave: TP=101 FP=13 FN=24       Precision=0.89 Recall=0.81 F1=0.85
+Average F1=0.8335530463690033
+
+
+6. single kernel synthetic squared:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+Correlation Config:
+filter_window=21
+detrend_window=1100
+kernel_scales=[]
+Static threshold
+    threshold value=90
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=10 FN=2 Precision=0.75 Recall=0.94 F1=0.83
+Leave: TP=93 FP=7 FN=32 Precision=0.93 Recall=0.74 F1=0.83
+Average F1=0.8300000000000001
+
+
+7. Single kernel synthetic, nmormalized cross-correlation
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+Correlation Config:
+filter_window=15
+detrend_window=1250
+kernel_scales=[]
+Static threshold
+    threshold value=310
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=11 FN=2 Precision=0.73 Recall=0.94 F1=0.82
+Leave: TP=99 FP=12 FN=26        Precision=0.89 Recall=0.79 F1=0.84
+Average F1=0.8304504295333178
+
+
+
+7. Single kernel synthetic shorter (201 samples) (previous was 401 samples, same length of sine (401))
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+Correlation Config:
+filter_window=15
+detrend_window=850
+kernel_scales=[]
+Static threshold
+    threshold value=250
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=11 FN=2 Precision=0.73 Recall=0.94 F1=0.82
+Leave: TP=101 FP=14 FN=24       Precision=0.88 Recall=0.81 F1=0.84
+Average F1=0.8317922374429223
+
+
+8. Even shorter kernel (141 samples)
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+Correlation Config:
+filter_window=15
+detrend_window=850
+kernel_scales=[]
+Static threshold
+    threshold value=215
+
+Metrics (tolerance = 3.00s):
+Enter: TP=30 FP=11 FN=2 Precision=0.73 Recall=0.94 F1=0.82
+Leave: TP=100 FP=12 FN=25       Precision=0.89 Recall=0.80 F1=0.84
+Average F1=0.8328998323796313

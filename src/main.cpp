@@ -3,6 +3,7 @@
 
 #include "gate.h"
 #include "connection.h"
+#include "detection.h"
 
 
 bee_counter::GateConfig gateConfig[bee_counter::kNumGates] = {{.chargePin = 9,

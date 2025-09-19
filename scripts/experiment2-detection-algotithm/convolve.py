@@ -4,14 +4,14 @@ from scipy import signal
 from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
 
 class CorrelationConfig:
-    filter_window: int = 36
-    detrend_window: int = 1269
-    kernel_scales = [0.6, 0.85] # list of additional scaled kernels. Leave empty for one kernel mode
-    static_input_threshold: float = 85
+    filter_window: int = 15
+    detrend_window: int = 850
+    kernel_scales = [] # list of additional scaled kernels. Leave empty for one kernel mode
+    static_input_threshold: float = 215
     adaptive_input_q: float = 0.03
     adaptive_input_mult: float = 1.6
     adaptive_input_window: int = 5000
-    use_adaptive_threshold: bool = True
+    use_adaptive_threshold: bool = False
 
     def __repr__(self):
         ret = "Correlation Config:\n"
@@ -57,7 +57,7 @@ def run_correlation(input: FsmInput, config: CorrelationConfig):
     median = moving_median(signal_filtered, config.detrend_window)
     signal_detrended = signal_filtered - median
 
-    kernel = np.load("scripts/experiment2-detection-algotithm/data/kernel.npy")
+    kernel = np.load("scripts/experiment2-detection-algotithm/data/kernel-synthetic.npy")
 
     kernels = [kernel]
     for scale in config.kernel_scales:
@@ -65,9 +65,11 @@ def run_correlation(input: FsmInput, config: CorrelationConfig):
 
     # Run convolution
     correlated_signals = []
+    signal_detrended_normalized = signal_detrended / np.std(signal_detrended)
     for kernel in kernels:
-        correlated_signals.append(signal.correlate(signal_detrended, kernel, mode='same'))
+        correlated_signals.append(signal.correlate(signal_detrended_normalized, kernel / np.std(kernel), mode='same'))
     correlated_signal = np.mean(np.array(correlated_signals), axis=0)
+    # correlated_signal = np.max(np.array(correlated_signals), axis=0)
 
     if config.use_adaptive_threshold:
         up_threshold, bottom_threshold = adaptive_threshold(correlated_signal, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window)
@@ -105,23 +107,35 @@ def run_correlation(input: FsmInput, config: CorrelationConfig):
 if __name__ == "__main__":
     # Extract the kernel:
 
-    # import pandas as pd
+    import pandas as pd
     import matplotlib.pyplot as plt
-    # channel_idx = 0
-    # RAW_DATA_FILE = 'data/experiments/processed-data/raw-time-adjusted.csv'
-    # channel_name = f'delta{channel_idx}'
-    # df = pd.read_csv(RAW_DATA_FILE)
-    # mask = np.ones(len(df), dtype=bool)
-    # signal = df.loc[mask, channel_name].to_numpy(dtype=float)
+    channel_idx = 0
+    RAW_DATA_FILE = 'data/experiments/processed-data/raw-time-adjusted.csv'
+    channel_name = f'delta{channel_idx}'
+    df = pd.read_csv(RAW_DATA_FILE)
+    mask = np.ones(len(df), dtype=bool)
+    signal = df.loc[mask, channel_name].to_numpy(dtype=float)
 
-    # signal = moving_average(signal, 50)
-    # median = moving_median(signal, 1050)
-    # signal = signal-median
+    signal = moving_average(signal, 50)
+    print("{"+",".join(signal[0:10000].astype(str))+"};")
+    median = moving_median(signal, 1050)
+    signal = signal-median
 
-    # KERNEL_START = 3080
-    # KERNEL_LENGTH = 666
-    # kernel_end = KERNEL_START + KERNEL_LENGTH
-    # kernel = signal[KERNEL_START:kernel_end]
-    # plt.plot(kernel)
-    # plt.show()
-    # np.save("scripts/experiment2-detection-algotithm/data/kernel.npy", kernel)
+    KERNEL_START = 3103
+    KERNEL_LENGTH = 600
+    kernel_end = KERNEL_START + KERNEL_LENGTH
+    kernel = signal[KERNEL_START:kernel_end]
+
+    synthetic_kernel = np.zeros(141)
+    sin = np.sin(np.linspace(0, 2*np.pi, 101))
+    # fun = np.power(sin, 2) * np.sign(sin) * -1.33
+    fun = sin * -1.33
+    synthetic_kernel[20:121] = fun
+    # print("{"+",".join(synthetic_kernel.astype(str))+"};")
+
+
+    plt.plot(kernel)
+    plt.plot(synthetic_kernel)
+    plt.show()
+    np.save("scripts/experiment2-detection-algotithm/data/kernel.npy", kernel)
+    np.save("scripts/experiment2-detection-algotithm/data/kernel-synthetic.npy", synthetic_kernel)

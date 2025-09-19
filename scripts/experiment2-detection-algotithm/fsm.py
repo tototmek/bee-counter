@@ -2,7 +2,7 @@ import numpy as np
 from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
 
 class FsmConfig:
-    filter_window: int = 27
+    filter_window: int = 31
     detrend_window: int = 1269
     timeout_samples: int = 143
     static_input_threshold: float = 0.8711857628182433
