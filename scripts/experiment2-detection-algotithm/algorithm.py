@@ -74,15 +74,15 @@ def static_threshold(signal: np.ndarray, threshold: float):
     bottom_threshold = np.ones(len(signal), dtype=float) * -threshold
     return (up_threshold, bottom_threshold)
 
-def adaptive_threshold(signal: np.ndarray, q: float, mult: float, window_size: int) -> np.ndarray:
+def adaptive_threshold(signal: np.ndarray, q: float, mult: float, window_size: int, amount: float = 1, static: float = 1) -> np.ndarray:
     up_threshold = np.zeros(len(signal), dtype=float)
     bottom_threshold = np.zeros(len(signal), dtype=float)
     for i in range(len(signal)):
-        window = signal[max(0, i - window_size // 2):min(len(signal), i + window_size // 2 + 1)]
+        window = signal[max(0, i - window_size):min(len(signal), i+1)]
         q_low = np.quantile(window, q)
         q_high = np.quantile(window, 1.0 - q)
         q_low_scaled = q_low * mult
         q_high_scaled = q_high * mult
-        up_threshold[i] = q_high_scaled
-        bottom_threshold[i] = q_low_scaled
+        up_threshold[i] = q_high_scaled * amount + (1-amount)*static
+        bottom_threshold[i] = q_low_scaled * amount - (1-amount)*static
     return (up_threshold, bottom_threshold)

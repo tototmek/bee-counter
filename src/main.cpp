@@ -73,13 +73,13 @@ void loop() {
 }
 
 void primaryMcuLoop() {
-    // Measure channels 0-3 and receive channels 4-7
+    // Pomiar bramek 0-3 i odbiór bramek 4-7
     for (int i = 0; i < bee_counter::kNumGates; ++i) {
         gate_reading[i] = gate[i].measure();
         receiver.receiveReading(&single_reading, 5);
         gate_reading[single_reading.gateId] = single_reading;
     }
-    // Calculate deltas and remap channel indexes and directions
+    // Obliczenie sygnałów różnicowych i dostosowanie numeracji tuneli
     delta[0] = gate_reading[7].timeRawR - gate_reading[7].timeRawL;
     delta[1] = gate_reading[6].timeRawR - gate_reading[6].timeRawL;
     delta[2] = gate_reading[5].timeRawR - gate_reading[5].timeRawL;
@@ -94,11 +94,10 @@ void primaryMcuLoop() {
     }
     // Report data to pc
     std::string message =
-        fmt::format("{},{},{},{},{},{},{},{},{}", millis(),
+        fmt::format("{},{},{},{},{},{},{},{},{}\n", millis(),
                     beeCount[0], beeCount[1], beeCount[2], beeCount[3],
                     beeCount[4], beeCount[5], beeCount[6], beeCount[7]);
     Serial.print(message.c_str());
-    Serial.println();
 }
 
 void secondaryMcuLoop() {

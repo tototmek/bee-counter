@@ -102,6 +102,19 @@ def run_correlation(input: FsmInput, config: CorrelationConfig):
 
     return FsmOutput(enter_ts, leave_ts), debug
 
+def setup_latex_plots():
+    latex_preamble = r"""
+        \usepackage[utf8]{inputenc} 
+        \usepackage[T1]{fontenc}
+        """
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "text.latex.preamble": latex_preamble,
+        "font.size": 10
+        # "mathtext.fontset": "cm" 
+    })
 
 
 if __name__ == "__main__":
@@ -133,9 +146,15 @@ if __name__ == "__main__":
     synthetic_kernel[20:121] = fun
     # print("{"+",".join(synthetic_kernel.astype(str))+"};")
 
+    setup_latex_plots()
 
-    plt.plot(kernel)
+    plt.figure(figsize=(3.5, 1.5))
     plt.plot(synthetic_kernel)
+    plt.plot(kernel)
+    plt.xlabel(r'$m$')
+    plt.ylabel(r'$w(m)$')
+    plt.legend(['(a)', '(b)'], frameon=False)
+    plt.savefig('kernels.pdf', bbox_inches="tight")
     plt.show()
     np.save("scripts/experiment2-detection-algotithm/data/kernel.npy", kernel)
     np.save("scripts/experiment2-detection-algotithm/data/kernel-synthetic.npy", synthetic_kernel)

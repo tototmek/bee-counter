@@ -44,9 +44,9 @@ class VideoAnnotator:
         self.events.append(event)
         self.undo_stack.append(event)
         if event_type == "enter":
-            print(f"+🐝 at {timestamp:.2f}s")
+            print(f"bee++ at {timestamp:.2f}s")
         else:
-            print(f"-🐝 at {timestamp:.2f}s")
+            print(f"bee-- at {timestamp:.2f}s")
     
     def undo_last_events(self, seconds: int = 5):
         """Remove events from the last N seconds."""

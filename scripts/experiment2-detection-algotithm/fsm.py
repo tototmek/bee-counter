@@ -6,9 +6,10 @@ class FsmConfig:
     detrend_window: int = 1269
     timeout_samples: int = 143
     static_input_threshold: float = 0.8711857628182433
-    adaptive_input_q: float = 0.07
-    adaptive_input_mult: float = 1.6
-    adaptive_input_window: int = 5000
+    adaptive_input_q: float = 0.2
+    adaptive_input_mult: float = 7
+    adaptive_input_amount: float = 0.4
+    adaptive_input_window: int = 1500
     use_adaptive_threshold: bool = True
 
     def __repr__(self):
@@ -87,7 +88,7 @@ def run_fsm(input: FsmInput, config: FsmConfig):
 
     # Threshold
     if config.use_adaptive_threshold:
-        up_threshold, bottom_threshold = adaptive_threshold(signal_detrended, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window)
+        up_threshold, bottom_threshold = adaptive_threshold(signal_detrended, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window, config.adaptive_input_amount, config.static_input_threshold)
     else:
         up_threshold, bottom_threshold = static_threshold(signal_detrended, config.static_input_threshold)
     signal_thresholded = np.zeros(len(signal_detrended), dtype=float)

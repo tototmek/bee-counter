@@ -38,6 +38,25 @@ Enter: TP=30 FP=18 FN=2 Precision=0.62 Recall=0.94 F1=0.75
 Leave: TP=101 FP=11 FN=24       Precision=0.90 Recall=0.81 F1=0.85
 Average F1=0.8011603375527426
 
+2.5 FSM improved adaptive threshold:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+FSM Config:
+filter_window=31
+detrend_window=1269
+timeout_samples=143
+Adaptive threshold
+    input_q=0.2
+    input_mult=7
+    input_window=1500
+
+Metrics (tolerance = 3.00s):
+Enter: TP=27 FP=16 FN=5 Precision=0.63 Recall=0.84 F1=0.72
+Leave: TP=109 FP=6 FN=16        Precision=0.95 Recall=0.87 F1=0.91
+Average F1=0.8141666666666667
+
 
 
 3. Single-kernel cross-correlation static threshold
