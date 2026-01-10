@@ -57,6 +57,41 @@ Enter: TP=27 FP=16 FN=5 Precision=0.63 Recall=0.84 F1=0.72
 Leave: TP=109 FP=6 FN=16        Precision=0.95 Recall=0.87 F1=0.91
 Average F1=0.8141666666666667
 
+2.5 fsm static after improved structure:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+FSM Config:
+filter_window=31
+detrend_window=1269
+timeout_samples=180
+Static threshold
+    threshold value=1.22
+
+Metrics (tolerance = 3.00s):
+Enter: TP=29 FP=10 FN=3 Precision=0.74 Recall=0.91 F1=0.82
+Leave: TP=114 FP=7 FN=11        Precision=0.94 Recall=0.91 F1=0.93
+Average F1=0.8718653383716937
+
+2.75: FSM after improved structure:
+Loaded signal samples: 182546
+Time samples: 182546
+Enter events in range: 32
+Leave events in range: 125
+FSM Config:
+filter_window=31
+detrend_window=1269
+timeout_samples=180
+Adaptive threshold
+    input_q=0.2
+    input_mult=7
+    input_window=1500
+
+Metrics (tolerance = 3.00s):
+Enter: TP=28 FP=3 FN=4  Precision=0.90 Recall=0.88 F1=0.89
+Leave: TP=109 FP=3 FN=16        Precision=0.97 Recall=0.87 F1=0.92
+Average F1=0.9043600562587903
 
 
 3. Single-kernel cross-correlation static threshold

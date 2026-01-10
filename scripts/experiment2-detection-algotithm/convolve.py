@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import signal
+from matplotlib import pyplot as plt
 
 from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
 
@@ -7,10 +8,11 @@ class CorrelationConfig:
     filter_window: int = 15
     detrend_window: int = 850
     kernel_scales = [] # list of additional scaled kernels. Leave empty for one kernel mode
-    static_input_threshold: float = 215
-    adaptive_input_q: float = 0.03
-    adaptive_input_mult: float = 1.6
-    adaptive_input_window: int = 5000
+    static_input_threshold: float = 90
+    adaptive_input_q: float = 0.15
+    adaptive_input_mult: float = 7
+    adaptive_input_amount: float = 0.4
+    adaptive_input_window: int = 1000
     use_adaptive_threshold: bool = False
 
     def __repr__(self):
@@ -65,14 +67,13 @@ def run_correlation(input: FsmInput, config: CorrelationConfig):
 
     # Run convolution
     correlated_signals = []
-    signal_detrended_normalized = signal_detrended / np.std(signal_detrended)
     for kernel in kernels:
-        correlated_signals.append(signal.correlate(signal_detrended_normalized, kernel / np.std(kernel), mode='same'))
+        correlated_signals.append(signal.correlate(signal_detrended, kernel, mode='same'))
     correlated_signal = np.mean(np.array(correlated_signals), axis=0)
     # correlated_signal = np.max(np.array(correlated_signals), axis=0)
 
     if config.use_adaptive_threshold:
-        up_threshold, bottom_threshold = adaptive_threshold(correlated_signal, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window)
+        up_threshold, bottom_threshold = adaptive_threshold(correlated_signal, config.adaptive_input_q, config.adaptive_input_mult, config.adaptive_input_window, config.adaptive_input_amount, config.static_input_threshold)
     else:
         up_threshold, bottom_threshold = static_threshold(correlated_signal, config.static_input_threshold)
 
@@ -139,18 +140,18 @@ if __name__ == "__main__":
     kernel_end = KERNEL_START + KERNEL_LENGTH
     kernel = signal[KERNEL_START:kernel_end]
 
-    synthetic_kernel = np.zeros(141)
-    sin = np.sin(np.linspace(0, 2*np.pi, 101))
+    synthetic_kernel = np.zeros(121)
+    sin = np.sin(np.linspace(0, 2*np.pi, 81))
     # fun = np.power(sin, 2) * np.sign(sin) * -1.33
     fun = sin * -1.33
-    synthetic_kernel[20:121] = fun
+    synthetic_kernel[20:101] = fun
     # print("{"+",".join(synthetic_kernel.astype(str))+"};")
 
     setup_latex_plots()
 
     plt.figure(figsize=(3.5, 1.5))
-    plt.plot(synthetic_kernel)
-    plt.plot(kernel)
+    plt.plot(kernel, c="grey", lw=0.75)
+    plt.plot(synthetic_kernel, c="black", lw=0.75)
     plt.xlabel(r'$m$')
     plt.ylabel(r'$w(m)$')
     plt.legend(['(a)', '(b)'], frameon=False)

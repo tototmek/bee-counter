@@ -185,8 +185,8 @@ def main() -> int:
     print(f"Leave events in range: {leave_ts.size}")
     fsm_input = FsmInput(time, signal)
 
-    algorithm = "fsm"
-    # algorithm = "correlation"
+    # algorithm = "fsm"
+    algorithm = "correlation"
     
     if algorithm == 'fsm':
         config = FsmConfig()
@@ -204,13 +204,14 @@ def main() -> int:
     recall_l = tp_l / (tp_l + fn_l) if (tp_l + fn_l) > 0 else 0.0
     f1_e = 2 * precision_e * recall_e / (precision_e + recall_e) if (precision_e + recall_e) > 0 else 0.0
     f1_l = 2 * precision_l * recall_l / (precision_l + recall_l) if (precision_l + recall_l) > 0 else 0.0
+    avg_f1 = (f1_e + f1_l) / 2
 
     print(config)
 
     print("\nMetrics (tolerance = %.2fs):" % args.tol)
     print("Enter: TP=%d FP=%d FN=%d\tPrecision=%.2f Recall=%.2f F1=%.2f" % (tp_e, fp_e, fn_e, precision_e, recall_e, f1_e))
     print("Leave: TP=%d FP=%d FN=%d\tPrecision=%.2f Recall=%.2f F1=%.2f" % (tp_l, fp_l, fn_l, precision_l, recall_l, f1_l))
-    print(f"Average F1={(f1_l + f1_e)/2}")
+    print(f"Average F1={avg_f1}")
 
     # Error density (hardcoded margin 10s)
     unmatched_enter_gt, unmatched_enter_pred = unmatched_events(enter_ts, np.asarray(fsm_output.enter_ts, dtype=float), args.tol)
@@ -280,6 +281,21 @@ def main() -> int:
         ax.grid(True, alpha=0.3)
         ax.legend(loc='upper right', frameon=False)
 
+        save_path = "algorithm-debug.npz"
+        np.savez_compressed(
+            save_path,
+            time=debug.time,
+            detrended=debug.detrended,
+            up_threshold=debug.up_threshold,
+            bottom_threshold=debug.bottom_threshold,
+            signal_thresholded=debug.signal_thresholded,
+            fsm_enter_ts=fsm_output.enter_ts,
+            fsm_leave_ts=fsm_output.leave_ts,
+            enter_ts=enter_ts,
+            leave_ts=leave_ts
+        )
+        print(f"Data successfully saved to {save_path}")
+
     axes[-1].set_xlabel('Time (s)')
 
     if algorithm == 'correlation':
@@ -291,7 +307,7 @@ def main() -> int:
         ax.legend(loc='upper right', frameon=False)
 
         ax = axes[4]
-        ax.step(debug.time, 1.5 * debug.total_correlation / np.max(debug.total_correlation), label="avg cross correlation")
+        ax.step(debug.time, debug.total_correlation, label="avg cross correlation")
         ax.plot(debug.time, debug.up_threshold, color='#9467bd', alpha=0.8, linewidth=1.2, linestyle='--', label='Up threshold')
         ax.plot(debug.time, debug.bottom_threshold, color='#9467bd', alpha=0.8, linewidth=1.2, linestyle='--', label='Bottom threshold')
         pred_enter = np.asarray(fsm_output.enter_ts, dtype=float)
@@ -302,12 +318,25 @@ def main() -> int:
         if pred_leave.size > 0:
             ax.vlines(pred_leave, -1, 0, colors='red', linewidth=2, label='Leave')
             ax.scatter(pred_leave, -np.ones_like(pred_leave), color='red', s=50, zorder=5)
-        ax.set_ylim(-1.5, 1.5)
-        ax.set_yticks([-1, 0, 1])
         ax.set_yticklabels(['Leave', '', 'Enter'])
         ax.set_ylabel('Events')
         ax.grid(True, alpha=0.3)
         ax.legend(loc='upper right', frameon=False)
+
+        save_path = "algorithm-debug.npz"
+        np.savez_compressed(
+            save_path,
+            time=debug.time,
+            detrended=debug.detrended,
+            up_threshold=debug.up_threshold,
+            bottom_threshold=debug.bottom_threshold,
+            correlation_signal=debug.total_correlation,
+            fsm_enter_ts=fsm_output.enter_ts,
+            fsm_leave_ts=fsm_output.leave_ts,
+            enter_ts=enter_ts,
+            leave_ts=leave_ts
+        )
+        print(f"Data successfully saved to {save_path}")
 
 
     plt.tight_layout(rect=[0, 0.02, 1, 0.96])

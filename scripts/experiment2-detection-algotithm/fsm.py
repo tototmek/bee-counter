@@ -2,15 +2,15 @@ import numpy as np
 from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
 
 class FsmConfig:
-    filter_window: int = 31
+    filter_window: int = 30
     detrend_window: int = 1269
-    timeout_samples: int = 143
-    static_input_threshold: float = 0.8711857628182433
+    timeout_samples: int = 180
+    static_input_threshold: float = 1.22 # 0.8752
     adaptive_input_q: float = 0.2
     adaptive_input_mult: float = 7
     adaptive_input_amount: float = 0.4
     adaptive_input_window: int = 1500
-    use_adaptive_threshold: bool = True
+    use_adaptive_threshold: bool = False
 
     def __repr__(self):
         ret = "FSM Config:\n"
@@ -62,7 +62,7 @@ class DetectorFsm:
         elif self.state == 1:
             self.timer += 1
             if input == -1:
-                self.state = 0
+                self.state = 3
                 self.output += 1
             elif self.timer > self.timeout:
                 self.state = 0
@@ -70,10 +70,14 @@ class DetectorFsm:
         elif self.state == 2:
             self.timer += 1
             if input == 1:
-                self.state = 0
+                self.state = 3
                 self.output -= 1
             elif self.timer > self.timeout:
                 self.state = 0
+
+        elif self.state == 3:
+            if input == 0:
+                self.state = 0 
 
         return self.output
 
