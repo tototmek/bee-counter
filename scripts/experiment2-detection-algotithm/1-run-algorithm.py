@@ -185,8 +185,8 @@ def main() -> int:
     print(f"Leave events in range: {leave_ts.size}")
     fsm_input = FsmInput(time, signal)
 
-    # algorithm = "fsm"
-    algorithm = "correlation"
+    algorithm = "fsm"
+    # algorithm = "correlation"
     
     if algorithm == 'fsm':
         config = FsmConfig()

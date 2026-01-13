@@ -1,104 +1,220 @@
-#include "fmt/core.h"
-#include <Arduino.h>
+#include "Arduino.h"
 
-#include "gate.h"
-#include "connection.h"
-#include "detection.h"
+#include <set>
+#include <string.h>
+
+#ifndef DETECTION_H
+#define DETECTION_H
+
+#include <cstddef>
+#include <set>
+
+constexpr int kFilterWindow = 31;
+constexpr int kDetrendWindow = 1269;
+constexpr int kTMax = 180;
+constexpr float kThreshold = 0.87f;
+constexpr float kAlpha = 0.4f;
+constexpr float kMu = 7.0f;
+constexpr float kQ = 0.2f;
+constexpr int kThresholdWindow = 1500;
+
+template<size_t N>
+class CircularBuffer {
+  public:
+    CircularBuffer() : m_head(0) {
+        for (size_t i = 0; i < N; ++i) {
+            m_buffer[i] = 0.0f;
+        }
+    }
+
+    void push_back(float value) {
+        m_buffer[m_head] = value;
+        m_head = (m_head + 1) % N;
+    }
+
+    float at(size_t index) const {
+        if (index >= N) {
+            return 0.0f; 
+        }
+        size_t physicalIndex = (m_head + index) % N;
+        return m_buffer[physicalIndex];
+    }
+    
+    size_t size() const { return N; }
+
+  private:
+    size_t m_head;
+    float m_buffer[N];
+};
+
+class RollingAverageFilter {
+  public:
+    float update(float newValue) {
+        // More efficient implementation of online averaging filter
+        average -= x.at(0) / float(kFilterWindow);
+        x.push_back(newValue);
+        average += newValue / float(kFilterWindow);
+        return average;
+    }
+
+  private:
+    CircularBuffer<kFilterWindow> x;
+    float average = 0;
+};
 
 
-bee_counter::GateConfig gateConfig[bee_counter::kNumGates] = {{.chargePin = 9,
-                                                  .measurePinL = 20,
-                                                  .measurePinR = 10,
-                                                  .invertDirection = false},
-                                                 {.chargePin = 4,
-                                                  .measurePinL = 0,
-                                                  .measurePinR = 21,
-                                                  .invertDirection = true},
-                                                 {.chargePin = 6,
-                                                  .measurePinL = 5,
-                                                  .measurePinR = 7,
-                                                  .invertDirection = false},
-                                                 {.chargePin = 2,
-                                                  .measurePinL = 3,
-                                                  .measurePinR = 1,
-                                                  .invertDirection = true}};
-bee_counter::Gate gate[bee_counter::kNumGates] = {gateConfig[0], gateConfig[1], gateConfig[2], gateConfig[3]};
-bee_counter::gate_reading_t gate_reading[bee_counter::kNumGates*2] = {0};
-int delta[bee_counter::kNumGates*2] = {0};
+class RollingMedianDetrender {
+  public:
+    RollingMedianDetrender() {
+        for (size_t i = 0; i < kDetrendWindow; ++i) {
+            float value = x.at(i);
+            bst.insert(value);
+        }
+    }
 
-bee_counter::connection::Receiver receiver{8};
-bee_counter::connection::Transmitter transmitter{8};
+    float update(float newValue) {
+        // 
+        float oldestValue = x.at(0);
+        x.push_back(newValue);
 
-hw_timer_t *timer = NULL;
-bool timerTick = false;
-void onTimer() {timerTick = true;}
+        // update the BST
+        bst.erase(bst.find(oldestValue));
+        bst.insert(newValue);
 
-void primaryMcuLoop();
-void secondaryMcuLoop();
+        // get the median
+        auto ptr = next(bst.rbegin(), kDetrendWindow/2);
+        float median = *ptr;
+        return newValue - median;
+    }
 
+  private:
+    CircularBuffer<kDetrendWindow> x;
+    std::multiset<float> bst;
+};
+
+
+class AdaptiveThreshold {
+  public:
+    AdaptiveThreshold() {
+        for (size_t i = 0; i < kDetrendWindow; ++i) {
+            float value = y.at(i);
+            bst.insert(value);
+        }
+    }
+
+    float update(float newValue) {
+        float oldestValue = y.at(0);
+        y.push_back(newValue);
+        bst.erase(bst.find(oldestValue));
+        bst.insert(newValue);
+
+        int pos1 = int(kThresholdWindow * kQ);
+        int pos2 = int(kThresholdWindow * (1 - kQ));
+        int posDelta = pos2 - pos1;
+
+        auto ptr = next(bst.rbegin(), pos1);
+        float low_Q = *ptr;
+        float lowThreshold = (1 - kAlpha) * -kThreshold + kAlpha * kMu * low_Q;
+        if (newValue < lowThreshold) {
+            return -1;
+        }
+        ptr = next(bst.rbegin(), posDelta);
+        float high_Q = *ptr;
+        float highThreshold = (1 - kAlpha) * kThreshold + kAlpha * kMu * high_Q;
+        if (newValue > lowThreshold) {
+            return 1;
+        }
+        return 0;
+    }
+
+  private:
+    CircularBuffer<kDetrendWindow> y;
+    std::multiset<float> bst;
+};
+
+
+class FsmDetector {
+  public:
+    int update(float newValue) { // returns 1 if a bee entered, -1 if a bee leaved, and 0 otherwise.
+        float signal = newValue;
+        // Signal preprocessing 
+        signal = filter.update(signal); 
+        signal = detrender.update(signal);
+        signal = threshold.update(signal);
+        // FSM logic
+        int output = 0;
+        switch(state) {
+            case 0:
+                if (signal == 1) {
+                    state = 1;
+                    timeoutCounter = 0;
+                } else if (signal == -1) {
+                    state = 2;
+                    timeoutCounter = 0;
+                }
+                break;
+            case 1:
+                ++timeoutCounter;
+                if (signal == -1) {
+                    state = 3;
+                    bee++;
+                    output = 1;
+                } else if (timeoutCounter > kTMax) {
+                    state = 0;
+                }
+                break;
+            case 2:
+                ++timeoutCounter;
+                if (signal == 1) {
+                    state = 3;
+                    bee--;
+                    output = -1;
+                } else if (timeoutCounter > kTMax) {
+                    state = 0;
+                }
+                break;
+            case 3:
+                if (signal == 0) {
+                    state = 0;
+                }
+                break;
+        }
+        return output;
+    }
+    
+  private:
+    int bee;
+    int state = 0;
+    int timeoutCounter = 0;
+    RollingAverageFilter filter;
+    RollingMedianDetrender detrender;
+    AdaptiveThreshold threshold;
+};
+
+
+
+#endif // DETECTION H
+
+
+FsmDetector detector;
 
 void setup() {
-    for (int i = 0; i < bee_counter::kNumGates; ++i) {
-        gate[i].initialize();
-    }
-    if (bee_counter::connection::getMode() == MODE_PRIMARY) { // Primary MCU mode
-        Serial.begin(115200);
-        receiver.initialize();
-    } else if (bee_counter::connection::getMode() == MODE_SECONDARY) { // Secondary MCU mode
-        transmitter.initialize();
-    } else {
-        Serial.println("MCU Connection mode not set in the EEPROM.");
-        while (true) {;}
-    }
-
-    timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(timer, &onTimer, true);
-    timerAlarmWrite(timer, 10000, true);
-    timerAlarmEnable(timer);
+    Serial.begin(115200);
 }
 
-bee_counter::gate_reading_t single_reading;
+uint32_t samples = 0;
+float total = 0;
 
 void loop() {
-    if (!timerTick) return; // Ensure further code is executed only after timer interrupt
-    timerTick = false;
-    if (bee_counter::connection::getMode() == MODE_PRIMARY) {
-        primaryMcuLoop();
-    } else {
-        secondaryMcuLoop();
+    uint32_t start = millis();
+    for (int i = 0; i < 20000; ++i) {
+        detector.update(float(rand()%120));
     }
-}
+    uint32_t stop = millis();
+    ++samples;
+    total = stop - start;
 
-void primaryMcuLoop() {
-    // Measure channels 0-3 and receive channels 4-7
-    for (int i = 0; i < bee_counter::kNumGates; ++i) {
-        gate_reading[i] = gate[i].measure();
-        receiver.receiveReading(&single_reading, 5);
-        gate_reading[single_reading.gateId] = single_reading;
-    }
-    // Calculate deltas and remap channel indexes and directions
-    delta[0] = gate_reading[7].timeRawR - gate_reading[7].timeRawL;
-    delta[1] = gate_reading[6].timeRawR - gate_reading[6].timeRawL;
-    delta[2] = gate_reading[5].timeRawR - gate_reading[5].timeRawL;
-    delta[3] = gate_reading[4].timeRawR - gate_reading[4].timeRawL;
-    delta[4] = gate_reading[0].timeRawL - gate_reading[0].timeRawR;
-    delta[7] = gate_reading[3].timeRawL - gate_reading[3].timeRawR;
-    delta[6] = gate_reading[2].timeRawL - gate_reading[2].timeRawR;
-    delta[5] = gate_reading[1].timeRawL - gate_reading[1].timeRawR;
-    // Report data to pc
-    std::string message =
-        fmt::format("{},{},{},{},{},{},{},{},{}", millis(),
-                    delta[0], delta[1], delta[2], delta[3],
-                    delta[4], delta[5], delta[6], delta[7]);
-    Serial.print(message.c_str());
-    Serial.println();
-}
-
-void secondaryMcuLoop() {
-    // Measure channels 0-3 and send to primary mcu as channels 4-7
-    for (int i = 0; i < bee_counter::kNumGates; ++i) {
-        single_reading = gate[i].measure();
-        single_reading.gateId = i+bee_counter::kNumGates;
-        transmitter.transmitReading(&single_reading);
-    }
+    Serial.print(total / 20);
+    Serial.println(" us");
+    delay(100);
 }

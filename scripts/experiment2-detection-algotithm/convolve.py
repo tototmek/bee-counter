@@ -5,15 +5,15 @@ from matplotlib import pyplot as plt
 from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_median, static_threshold, adaptive_threshold
 
 class CorrelationConfig:
-    filter_window: int = 15
+    filter_window: int = 20
     detrend_window: int = 850
     kernel_scales = [] # list of additional scaled kernels. Leave empty for one kernel mode
-    static_input_threshold: float = 90
-    adaptive_input_q: float = 0.15
-    adaptive_input_mult: float = 7
+    static_input_threshold: float = 95
+    adaptive_input_q: float = 0.3
+    adaptive_input_mult: float = 9
     adaptive_input_amount: float = 0.4
-    adaptive_input_window: int = 1000
-    use_adaptive_threshold: bool = False
+    adaptive_input_window: int = 1500
+    use_adaptive_threshold: bool = True
 
     def __repr__(self):
         ret = "Correlation Config:\n"

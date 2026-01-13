@@ -79,6 +79,7 @@ def adaptive_threshold(signal: np.ndarray, q: float, mult: float, window_size: i
     bottom_threshold = np.zeros(len(signal), dtype=float)
     for i in range(len(signal)):
         window = signal[max(0, i - window_size):min(len(signal), i+1)]
+        # window = signal[max(0, i - window_size//2):min(len(signal), i+window_size//2+1)]
         q_low = np.quantile(window, q)
         q_high = np.quantile(window, 1.0 - q)
         q_low_scaled = q_low * mult

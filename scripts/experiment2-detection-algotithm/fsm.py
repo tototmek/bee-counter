@@ -3,7 +3,7 @@ from algorithm import FsmInput, FsmOutput, increments, moving_average, moving_me
 
 class FsmConfig:
     filter_window: int = 30
-    detrend_window: int = 1269
+    detrend_window: int = 469
     timeout_samples: int = 180
     static_input_threshold: float = 1.22 # 0.8752
     adaptive_input_q: float = 0.2

@@ -253,10 +253,12 @@ Correlation Config:
 filter_window=15
 detrend_window=850
 kernel_scales=[]
-Static threshold
-    threshold value=215
+Adaptive threshold
+    input_q=0.2
+    input_mult=9
+    input_window=1200
 
 Metrics (tolerance = 3.00s):
-Enter: TP=30 FP=11 FN=2 Precision=0.73 Recall=0.94 F1=0.82
-Leave: TP=100 FP=12 FN=25       Precision=0.89 Recall=0.80 F1=0.84
-Average F1=0.8328998323796313
+Enter: TP=28 FP=9 FN=4  Precision=0.76 Recall=0.88 F1=0.81
+Leave: TP=118 FP=9 FN=7 Precision=0.93 Recall=0.94 F1=0.94
+Average F1=0.8740510697032435
