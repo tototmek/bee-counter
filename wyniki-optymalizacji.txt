@@ -1,0 +1,5 @@
+Z optymalizacją mediany:
+Execution time: 0.862091 us, ESP: 19.65 us
+
+Bez optymalizacji mediany:
+Execution time: 51.6349 us, ESP: 3783.00 us

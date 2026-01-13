@@ -26,7 +26,7 @@ bee_counter::Gate gate[bee_counter::kNumGates] = {gateConfig[0], gateConfig[1], 
 bee_counter::gate_reading_t gate_reading[bee_counter::kNumGates*2] = {0};
 int delta[bee_counter::kNumGates*2] = {0};
 
-Detector detectors[bee_counter::kNumGates*2];
+FsmDetector detectors[bee_counter::kNumGates*2];
 int beeCount[bee_counter::kNumGates*2] = {0};
 
 bee_counter::connection::Receiver receiver{8};

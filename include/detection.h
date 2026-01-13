@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <set>
 
-constexpr int kFilterWindow = 15;
-constexpr int kDetrendWindow = 850;
-constexpr float kThreshold = 215.0f;
-
-constexpr int kKernelLength = 141;
-const float kernel[kKernelLength] = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.0,-0.08351139097398678,-0.16669320064052467,-0.24921714839901377,-0.3307575499292569,-0.4109926025186801,-0.48960565507062176,-0.5662864577815467,-0.6407323865552814,-0.7126496373220655,-0.7817543855489894,-0.8477739063657574,-0.910447650885156,-0.9695282744704774,-1.0247826128917998,-1.0759926025186801,-1.12295614091768,-1.1654878844583387,-1.2034199797798062,-1.2366027262313746,-1.2649051666725544,-1.2882156043010795,-1.3064420434691562,-1.3195125527482556,-1.3273755488096013,-1.33,-1.3273755488096013,-1.3195125527482554,-1.306442043469156,-1.2882156043010795,-1.2649051666725544,-1.2366027262313743,-1.203419979779806,-1.1654878844583385,-1.12295614091768,-1.0759926025186801,-1.0247826128917998,-0.9695282744704773,-0.9104476508851558,-0.8477739063657571,-0.7817543855489895,-0.7126496373220655,-0.6407323865552813,-0.5662864577815464,-0.4896056550706214,-0.4109926025186797,-0.33075754992925693,-0.24921714839901368,-0.16669320064052445,-0.08351139097398648,4.2776062481398537e-16,0.08351139097398676,0.1666932006405247,0.24921714839901396,0.3307575499292572,0.4109926025186805,0.4896056550706222,0.5662864577815466,0.6407323865552815,0.7126496373220658,0.7817543855489896,0.8477739063657577,0.910447650885156,0.9695282744704774,1.0247826128917998,1.0759926025186801,1.1229561409176805,1.1654878844583387,1.2034199797798064,1.2366027262313746,1.2649051666725544,1.2882156043010795,1.3064420434691562,1.3195125527482556,1.3273755488096013,1.33,1.3273755488096013,1.3195125527482556,1.306442043469156,1.2882156043010795,1.2649051666725544,1.2366027262313741,1.2034199797798062,1.1654878844583383,1.12295614091768,1.0759926025186797,1.0247826128917994,0.9695282744704774,0.9104476508851554,0.8477739063657572,0.7817543855489886,0.7126496373220651,0.6407323865552814,0.5662864577815461,0.4896056550706216,0.41099260251867925,0.3307575499292565,0.24921714839901385,0.16669320064052404,0.08351139097398665,3.2575604857319597e-16,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}; 
+constexpr int kFilterWindow = 31;
+constexpr int kDetrendWindow = 1269;
+constexpr int kTMax = 180;
+constexpr float kThreshold = 0.87f;
+constexpr float kAlpha = 0.4f;
+constexpr float kMu = 7.0f;
+constexpr float kQ = 0.2f;
+constexpr int kThresholdWindow = 1500;
 
 template<size_t N>
 class CircularBuffer {
@@ -33,13 +35,11 @@ class CircularBuffer {
         return m_buffer[physicalIndex];
     }
     
-    size_t size() const {
-        return N;
-    }
+    size_t size() const { return N; }
 
   private:
-    float m_buffer[N];
     size_t m_head;
+    float m_buffer[N];
 };
 
 class RollingAverageFilter {
@@ -59,111 +59,128 @@ class RollingAverageFilter {
 
 
 class RollingMedianDetrender {
-public:
-    // Efficient O(log(n)) implementation
+  public:
     RollingMedianDetrender() {
-        // Initialize the buffer with zeros and populate the multisets.
         for (size_t i = 0; i < kDetrendWindow; ++i) {
             float value = x.at(i);
-            lower_half.insert(value);
-            rebalance();
+            bst.insert(value);
         }
     }
 
     float update(float newValue) {
-        // Get the oldest value to remove from the filter window.
+        // 
         float oldestValue = x.at(0);
-
         x.push_back(newValue);
 
-        // Remove the oldest value from the correct multiset.
-        if (oldestValue <= *lower_half.rbegin()) {
-            lower_half.erase(lower_half.find(oldestValue));
-        } else {
-            upper_half.erase(upper_half.find(oldestValue));
-        }
+        // update the BST
+        bst.erase(bst.find(oldestValue));
+        bst.insert(newValue);
 
-        // Insert the new value into the correct multiset.
-        if (!lower_half.empty() && newValue > *lower_half.rbegin()) {
-            upper_half.insert(newValue);
-        } else {
-            lower_half.insert(newValue);
-        }
-
-        rebalance();
-
-        return newValue - *lower_half.rbegin();
-    }
-
-private:
-    void rebalance() {
-        // Ensure that lower_half has one more element than upper_half.
-        while (lower_half.size() > upper_half.size() + 1) {
-            // Move an element from lower_half to upper_half.
-            upper_half.insert(*lower_half.rbegin());
-            lower_half.erase(std::prev(lower_half.end()));
-        }
-        // Ensure that upper_half doesn't have more elements than lower_half.
-        while (upper_half.size() > lower_half.size()) {
-            // Move an element from upper_half to lower_half.
-            lower_half.insert(*upper_half.begin());
-            upper_half.erase(upper_half.begin());
-        }
-    }
-    CircularBuffer<kDetrendWindow> x;
-    std::multiset<float> lower_half;
-    std::multiset<float> upper_half;
-};
-
-
-class Correlator {
-  public:
-    float update(float newValue) {
-        x.push_back(newValue);
-
-        // Compute cross-correlation with signal model
-        float R = 0;
-        for (int tau = 0; tau < kKernelLength; ++tau) {
-            R += kernel[tau] * x.at(tau);
-        }
-
-        return R;
+        // get the median
+        float median = *next(bst.rbegin(), kDetrendWindow/2);
+        return newValue - median;
     }
 
   private:
-    CircularBuffer<kKernelLength> x;
+    CircularBuffer<kDetrendWindow> x;
+    std::multiset<float> bst;
 };
 
 
-class Detector {
+class AdaptiveThreshold {
+  public:
+    AdaptiveThreshold() {
+        for (size_t i = 0; i < kDetrendWindow; ++i) {
+            float value = y.at(i);
+            bst.insert(value);
+        }
+    }
+
+    float update(float newValue) {
+        float oldestValue = y.at(0);
+        y.push_back(newValue);
+        bst.erase(bst.find(oldestValue));
+        bst.insert(newValue);
+
+        int pos1 = int(kThresholdWindow * kQ);
+        int pos2 = int(kThresholdWindow * (1 - kQ));
+        int posDelta = pos2 - pos1;
+
+        float low_Q = *next(bst.rbegin(), pos1);
+        float lowThreshold = (1 - kAlpha) * -kThreshold + kAlpha * kMu * low_Q;
+        if (newValue < lowThreshold) {
+            return -1;
+        }
+        float high_Q = *next(bst.rbegin(), posDelta);
+        float highThreshold = (1 - kAlpha) * kThreshold + kAlpha * kMu * high_Q;
+        if (newValue > lowThreshold) {
+            return 1;
+        }
+        return 0;
+    }
+
+  private:
+    CircularBuffer<kDetrendWindow> y;
+    std::multiset<float> bst;
+};
+
+
+class FsmDetector {
   public:
     int update(float newValue) { // returns 1 if a bee entered, -1 if a bee leaved, and 0 otherwise.
         float signal = newValue;
+        // Signal preprocessing 
         signal = filter.update(signal); 
         signal = detrender.update(signal);
-        signal = correlator.update(signal);
-
-        int state = 0;
-        if (signal < -kThreshold) { state = 1; }
-        else if (signal > kThreshold) { state = -1; }
-
+        signal = threshold.update(signal);
+        // FSM logic
         int output = 0;
-        if (prevState != 1 and state == 1) {
-            output = 1;
-        } else if (prevState != -1 and state == -1) {
-            output = -1;
+        switch(state) {
+            case 0:
+                if (signal == 1) {
+                    state = 1;
+                    timeoutCounter = 0;
+                } else if (signal == -1) {
+                    state = 2;
+                    timeoutCounter = 0;
+                }
+                break;
+            case 1:
+                ++timeoutCounter;
+                if (signal == -1) {
+                    state = 3;
+                    bee++;
+                    output = 1;
+                } else if (timeoutCounter > kTMax) {
+                    state = 0;
+                }
+                break;
+            case 2:
+                ++timeoutCounter;
+                if (signal == 1) {
+                    state = 3;
+                    bee--;
+                    output = -1;
+                } else if (timeoutCounter > kTMax) {
+                    state = 0;
+                }
+                break;
+            case 3:
+                if (signal == 0) {
+                    state = 0;
+                }
+                break;
         }
-
-        prevState = state;
         return output;
     }
     
   private:
+    int bee;
+    int state = 0;
+    int timeoutCounter = 0;
     RollingAverageFilter filter;
     RollingMedianDetrender detrender;
-    Correlator correlator;
-    int prevState = 0;
-
+    AdaptiveThreshold threshold;
 };
 
 
